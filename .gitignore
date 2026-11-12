@@ -1,0 +1,27 @@
+# Secrets & Environment
+.env
+.env.*
+*.pem
+*.key
+
+# Node / Frontend
+node_modules/
+.next/
+out/
+dist/
+build/
+.turbo/
+npm-debug.log*
+
+# Foundry / Hardhat
+cache/
+artifacts/
+typechain-types/
+coverage/
+lcov.info
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
