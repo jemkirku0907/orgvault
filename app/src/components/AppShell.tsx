@@ -70,23 +70,17 @@ export default function AppShell({
   const available = summary ? summary.vaultBalance : 3500;
   const totalDues = available + totalSpent;
 
-  const navItems = [
-    { href: "/submit", label: "Submit Receipt" },
-    { href: "/ledger", label: "Public Ledger" },
-    { href: "/admin", label: "Admin & Controls" },
-  ];
-
   const vaultUrl = summary?.orgVaultAddress
     ? `${EXPLORER_BASE}/address/${summary.orgVaultAddress}`
     : EXPLORER_BASE;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col lg:flex-row">
-      {/* Mobile Header */}
+      {/* Mobile Top Header */}
       <header className="lg:hidden sticky top-0 z-20 bg-white border-b border-[#E2E8F0] px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 font-semibold text-base">
-          <span className="w-8 h-8 rounded-xl bg-[#2563EB] text-white flex items-center justify-center text-sm font-bold">
-            OV
+          <span className="w-8 h-8 rounded-xl bg-[#2563EB] text-white flex items-center justify-center">
+            <ShieldIcon className="w-4 h-4" />
           </span>
           <span>OrgVault</span>
         </Link>
@@ -99,23 +93,23 @@ export default function AppShell({
         </button>
       </header>
 
-      {/* Sidebar */}
+      {/* Fixed Left Sidebar */}
       <aside
         className={`${
           mobileOpen ? "block" : "hidden"
-        } lg:flex lg:flex-col lg:justify-between lg:w-64 lg:fixed lg:inset-y-0 lg:left-0 bg-white border-r border-[#E2E8F0] p-4 z-30`}
+        } lg:flex lg:flex-col lg:justify-between lg:w-[260px] lg:fixed lg:inset-y-0 lg:left-0 bg-white border-r border-[#E2E8F0] p-4 z-30`}
       >
         <div className="space-y-5">
           <Link href="/" className="hidden lg:flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#2563EB] text-white flex items-center justify-center font-bold text-sm">
-              OV
+            <div className="w-9 h-9 rounded-xl bg-[#2563EB] text-white flex items-center justify-center">
+              <ShieldIcon className="w-5 h-5" />
             </div>
             <div>
               <div className="font-semibold text-[16px] leading-tight">
                 OrgVault
               </div>
               <div className="text-[11px] text-[#64748B]">
-                Guarded Student Treasury
+                Guarded Treasury
               </div>
             </div>
           </Link>
@@ -133,23 +127,40 @@ export default function AppShell({
           </div>
 
           <nav className="space-y-1" aria-label="Primary">
-            {navItems.map((item) => {
-              const active = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={`block px-3 py-2.5 rounded-xl text-[14px] font-medium transition-colors ${
-                    active
-                      ? "bg-[#EFF6FF] text-[#2563EB]"
-                      : "text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
+            <NavLink
+              href="/submit"
+              active={pathname === "/submit"}
+              onClick={() => setMobileOpen(false)}
+              label="Submit Receipt"
+              icon={
+                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              }
+            />
+            <NavLink
+              href="/ledger"
+              active={pathname === "/ledger"}
+              onClick={() => setMobileOpen(false)}
+              label="Public Ledger"
+              icon={
+                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              }
+            />
+            <NavLink
+              href="/admin"
+              active={pathname === "/admin"}
+              onClick={() => setMobileOpen(false)}
+              label="Admin & Controls"
+              icon={
+                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              }
+            />
           </nav>
         </div>
 
@@ -160,9 +171,7 @@ export default function AppShell({
             rel="noopener noreferrer"
             className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] hover:border-[#2563EB] transition-colors"
           >
-            <span className="font-medium text-[#0F172A]">
-              BSC Testnet
-            </span>
+            <span className="font-medium text-[#0F172A]">BSC Testnet</span>
             <span className="text-[#2563EB] font-semibold">BscScan ↗</span>
           </a>
           <Link
@@ -175,47 +184,131 @@ export default function AppShell({
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
+      <div className="flex-1 lg:pl-[260px] flex flex-col min-h-screen">
         <header className="bg-white border-b border-[#E2E8F0]">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-lg font-bold tracking-tight">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight">
                 {profile.orgName}
               </h1>
-              <p className="text-xs text-[#64748B] mt-0.5">
-                AI-checked receipts &amp; on-chain treasury rules
+              <p className="text-[13px] text-[#64748B] mt-0.5">
+                {profile.university} · MockPHP (1 Token = ₱1.00)
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 text-xs">
-              <div>
-                <div className="text-[#64748B]">Available</div>
-                <div className="font-bold text-[15px] tabular-nums text-[#0F172A]">
-                  {formatPeso(available)}
-                </div>
-              </div>
-              <div className="h-7 w-px bg-[#E2E8F0]" />
-              <div>
-                <div className="text-[#64748B]">Dues In</div>
-                <div className="font-semibold text-[14px] tabular-nums text-[#10B981]">
-                  {formatPeso(totalDues)}
-                </div>
-              </div>
-              <div className="h-7 w-px bg-[#E2E8F0]" />
-              <div>
-                <div className="text-[#64748B]">Spent Out</div>
-                <div className="font-semibold text-[14px] tabular-nums text-[#0F172A]">
-                  {formatPeso(totalSpent)}
-                </div>
-              </div>
+            <div className="flex items-center gap-2.5">
+              <Link
+                href="/admin"
+                className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-[13px] font-medium transition-colors"
+              >
+                + Pay Dues
+              </Link>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          {/* 3 Financial Overview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-medium text-[#64748B]">
+                  Vault Available Balance
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="mt-2.5 text-2xl font-bold tracking-tight tabular-nums">
+                {formatPeso(available)}
+              </div>
+              <div className="mt-0.5 text-xs text-[#64748B]">
+                On-chain vault balance
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-medium text-[#64748B]">
+                  Total Dues
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-[#ECFDF5] text-[#10B981] flex items-center justify-center">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+              </div>
+              <div className="mt-2.5 text-2xl font-bold tracking-tight tabular-nums">
+                {formatPeso(totalDues)}
+              </div>
+              <div className="mt-0.5 text-xs text-[#64748B]">
+                Member contributions
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-medium text-[#64748B]">
+                  Total Expenses
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-slate-100 text-[#475569] flex items-center justify-center">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="mt-2.5 text-2xl font-bold tracking-tight tabular-nums">
+                {formatPeso(totalSpent)}
+              </div>
+              <div className="mt-0.5 text-xs text-[#64748B]">
+                Settled payouts
+              </div>
+            </div>
+          </div>
+
           {children}
         </main>
       </div>
     </div>
+  );
+}
+
+function ShieldIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3l7 4v5c0 4.97-3.05 9.18-7 10.5C8.05 21.18 5 16.97 5 12V7l7-4z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
+function NavLink({
+  href,
+  active,
+  onClick,
+  label,
+  icon,
+}: {
+  href: string;
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] font-medium transition-colors ${
+        active
+          ? "bg-[#EFF6FF] text-[#2563EB]"
+          : "text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+      }`}
+    >
+      {icon}
+      <span>{label}</span>
+    </Link>
   );
 }

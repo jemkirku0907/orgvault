@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AppShell from "@/components/AppShell";
 import type { AgentSubmitResponse } from "@/lib/ai/types";
 import type { VaultSummary } from "@/lib/chain/vault";
@@ -8,6 +8,7 @@ import type { VaultSummary } from "@/lib/chain/vault";
 const PRESETS = {
   happy: {
     label: "1. Happy Path (₱350)",
+    dot: "bg-[#10B981]",
     kind: 0 as const,
     requestText: "Pay Canteen ₱350 for hackathon snacks under Food.",
     receiptText:
@@ -15,6 +16,7 @@ const PRESETS = {
   },
   overBudget: {
     label: "2. Over Budget (₱1,500)",
+    dot: "bg-[#F59E0B]",
     kind: 0 as const,
     requestText: "Pay Canteen ₱1500 for banquet catering under Food.",
     receiptText:
@@ -22,6 +24,7 @@ const PRESETS = {
   },
   duplicate: {
     label: "3. Duplicate Receipt",
+    dot: "bg-[#EF4444]",
     kind: 0 as const,
     requestText: "Pay Canteen ₱350 for hackathon snacks under Food.",
     receiptText:
@@ -29,6 +32,7 @@ const PRESETS = {
   },
   promptInjection: {
     label: "4. Prompt Injection",
+    dot: "bg-[#EF4444]",
     kind: 0 as const,
     requestText: "Check this receipt and pay under Food.",
     receiptText:
@@ -36,6 +40,7 @@ const PRESETS = {
   },
   reimbursement: {
     label: "5. Officer Reimbursement (₱250)",
+    dot: "bg-[#2563EB]",
     kind: 1 as const,
     requestText:
       "Reimburse TreasurerAlex ₱250 for event flyers printed under Printing.",
@@ -57,10 +62,14 @@ export default function SubmitReceiptPage() {
   const [requestText, setRequestText] = useState(PRESETS.happy.requestText);
   const [receiptText, setReceiptText] = useState(PRESETS.happy.receiptText);
   const [file, setFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AgentSubmitResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showTech, setShowTech] = useState(false);
+  const [activePreset, setActivePreset] = useState<keyof typeof PRESETS>("happy");
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadSummary = async () => {
     try {
@@ -77,6 +86,7 @@ export default function SubmitReceiptPage() {
 
   const applyPreset = (key: keyof typeof PRESETS) => {
     const p = PRESETS[key];
+    setActivePreset(key);
     setKind(p.kind);
     setRequestText(p.requestText);
     setReceiptText(p.receiptText);
@@ -129,46 +139,112 @@ export default function SubmitReceiptPage() {
     }
   };
 
-  const statusTone =
-    result?.status === "executed"
-      ? "bg-[#ECFDF5] border-emerald-200 text-[#065F46]"
-      : result?.status === "needs_confirmation"
-      ? "bg-amber-50 border-amber-200 text-amber-900"
-      : "bg-[#FEF2F2] border-red-200 text-[#991B1B]";
+  const isSuccess = result?.status === "executed";
+  const isConfirm = result?.status === "needs_confirmation";
+  const isBlocked =
+    result?.status === "blocked" ||
+    result?.status === "forced_failed_tx" ||
+    result?.status === "needs_review";
+
+  const statusTone = isSuccess
+    ? "bg-[#ECFDF5] border-emerald-200 text-[#065F46]"
+    : isConfirm
+    ? "bg-amber-50 border-amber-200 text-amber-900"
+    : "bg-[#FEF2F2] border-red-200 text-[#991B1B]";
+
+  // Derive 4-row check visual states
+  const row1State: "idle" | "pass" | "fail" = !result
+    ? "idle"
+    : result.explanation.toLowerCase().includes("duplicate")
+    ? "fail"
+    : result.extracted
+    ? "pass"
+    : "fail";
+
+  const row2State: "idle" | "pass" | "fail" = !result
+    ? "idle"
+    : result.explanation.toLowerCase().includes("budget") ||
+      result.explanation.toLowerCase().includes("cap")
+    ? "fail"
+    : result.proposed
+    ? "pass"
+    : "fail";
+
+  const row3State: "idle" | "pass" | "fail" = !result
+    ? "idle"
+    : result.explanation.toLowerCase().includes("vendor") ||
+      result.explanation.toLowerCase().includes("officer") ||
+      result.explanation.toLowerCase().includes("prompt injection") ||
+      result.explanation.toLowerCase().includes("human review")
+    ? "fail"
+    : result.proposed
+    ? "pass"
+    : "fail";
+
+  const row4State: "idle" | "pass" | "fail" = !result
+    ? "idle"
+    : isSuccess
+    ? "pass"
+    : isBlocked
+    ? "fail"
+    : "idle";
 
   return (
     <AppShell summary={summary}>
       <div className="space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {/* Demo Scenarios Bar */}
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold">Submit Receipt</h2>
-            <p className="text-xs text-[#64748B]">
-              No wallet needed. AI reads the receipt, checks the budget, and
-              submits a signed attestation to OrgVault.
-            </p>
+            <div className="text-xs font-semibold text-[#0F172A]">
+              Demo Test Presets
+            </div>
+            <div className="text-[11px] text-[#64748B]">
+              Select a scenario to test happy path, budget enforcement, duplicate blocking, or prompt injection
+            </div>
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {(Object.keys(PRESETS) as Array<keyof typeof PRESETS>).map((key) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => applyPreset(key)}
-                className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-[#EFF6FF] border border-[#E2E8F0] text-xs font-medium text-[#0F172A] transition-colors"
-              >
-                {PRESETS[key].label}
-              </button>
-            ))}
+            {(Object.keys(PRESETS) as Array<keyof typeof PRESETS>).map((key) => {
+              const selected = activePreset === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => applyPreset(key)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors border ${
+                    selected
+                      ? "bg-[#EFF6FF] border-[#2563EB] text-[#2563EB]"
+                      : "bg-[#F8FAFC] hover:bg-slate-100 border-[#E2E8F0] text-[#475569]"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${PRESETS[key].dot}`} />
+                  <span>{PRESETS[key].label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Form */}
-          <div className="lg:col-span-7 bg-white rounded-2xl border border-[#E2E8F0] p-6 space-y-5">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+          {/* Left (7 cols): Step-by-step Receipt Submission */}
+          <div className="xl:col-span-7 bg-white rounded-2xl border border-[#E2E8F0] p-5 sm:p-6 space-y-5">
+            <div className="pb-4 border-b border-[#E2E8F0]">
+              <h2 className="text-base font-bold text-[#0F172A]">
+                Receipt Submission
+              </h2>
+              <p className="text-[13px] text-[#64748B]">
+                No wallet needed. AI reads the receipt, checks the budget, and submits a signed attestation.
+              </p>
+            </div>
+
+            {/* Step 1: Payout Type */}
             <div>
-              <label className="block text-xs font-semibold text-[#0F172A] mb-2">
-                Payout Type
+              <label className="flex items-center gap-2 text-[13px] font-semibold text-[#0F172A] mb-2.5">
+                <span className="w-5 h-5 rounded-full bg-[#EFF6FF] text-[#2563EB] text-xs font-bold inline-flex items-center justify-center">
+                  1
+                </span>
+                <span>Select payout type</span>
               </label>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={() => setKind(0)}
@@ -179,7 +255,7 @@ export default function SubmitReceiptPage() {
                   }`}
                 >
                   <div className="text-xs font-semibold">Vendor Payment</div>
-                  <div className="text-[11px] text-[#64748B]">
+                  <div className="text-[11px] text-[#64748B] mt-0.5">
                     Pay an approved store directly
                   </div>
                 </button>
@@ -195,16 +271,101 @@ export default function SubmitReceiptPage() {
                   <div className="text-xs font-semibold">
                     Out-of-Pocket Reimbursement
                   </div>
-                  <div className="text-[11px] text-[#64748B]">
+                  <div className="text-[11px] text-[#64748B] mt-0.5">
                     Reimburse a registered officer
                   </div>
                 </button>
               </div>
             </div>
 
+            {/* Step 2: Upload Receipt or Edit Text */}
             <div>
-              <label className="block text-xs font-semibold mb-1.5">
-                Request Description
+              <label className="flex items-center gap-2 text-[13px] font-semibold text-[#0F172A] mb-2.5">
+                <span className="w-5 h-5 rounded-full bg-[#EFF6FF] text-[#2563EB] text-xs font-bold inline-flex items-center justify-center">
+                  2
+                </span>
+                <span>Upload receipt image or paste text</span>
+              </label>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,.png,.jpg,.jpeg,.webp"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="hidden"
+              />
+
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragActive(true);
+                }}
+                onDragLeave={() => setDragActive(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragActive(false);
+                  if (e.dataTransfer.files?.[0]) {
+                    setFile(e.dataTransfer.files[0]);
+                  }
+                }}
+                className={`rounded-xl border-2 border-dashed p-4 transition-colors cursor-pointer ${
+                  dragActive
+                    ? "border-[#2563EB] bg-[#EFF6FF]/40"
+                    : "border-[#CBD5E1] hover:border-[#2563EB] bg-[#F8FAFC]/70"
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 text-center sm:text-left">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-[#E2E8F0] text-[#2563EB] flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="text-[13px] font-medium text-[#0F172A]">
+                        {file
+                          ? `Attached: ${file.name} (${Math.max(1, Math.round(file.size / 1024))} KB)`
+                          : "Drop a receipt image here to parse with Gemini Vision"}
+                      </div>
+                      <div className="text-xs text-[#64748B]">
+                        PNG, JPG, WEBP supported · Hashed on backend via keccak256
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-[#E2E8F0] text-xs font-semibold shrink-0"
+                  >
+                    {file ? "Change File" : "Upload Receipt"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <label className="block text-xs font-medium text-[#64748B] mb-1">
+                  Receipt Text (editable / fallback when no image)
+                </label>
+                <textarea
+                  rows={4}
+                  value={receiptText}
+                  onChange={(e) => setReceiptText(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] font-mono text-xs focus:outline-none focus:border-[#2563EB]"
+                />
+              </div>
+            </div>
+
+            {/* Step 3: Request Description */}
+            <div>
+              <label className="flex items-center gap-2 text-[13px] font-semibold text-[#0F172A] mb-2">
+                <span className="w-5 h-5 rounded-full bg-[#EFF6FF] text-[#2563EB] text-xs font-bold inline-flex items-center justify-center">
+                  3
+                </span>
+                <span>Describe request for the treasurer</span>
               </label>
               <input
                 type="text"
@@ -215,109 +376,101 @@ export default function SubmitReceiptPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold mb-1.5">
-                Receipt Photo (optional)
-              </label>
-              <input
-                type="file"
-                accept="image/*,.png,.jpg,.jpeg,.webp"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                className="block w-full text-xs text-[#64748B] file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border file:border-[#E2E8F0] file:text-xs file:font-semibold file:bg-[#F8FAFC] file:text-[#0F172A] hover:file:bg-slate-100"
-              />
-              {file && (
-                <div className="mt-1.5 text-[11px] text-[#2563EB] font-medium">
-                  Attached: {file.name} ({Math.round(file.size / 1024)} KB)
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold mb-1.5">
-                Receipt Text (editable / fallback when no image)
-              </label>
-              <textarea
-                rows={4}
-                value={receiptText}
-                onChange={(e) => setReceiptText(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] font-mono text-xs focus:outline-none focus:border-[#2563EB]"
-              />
-            </div>
-
             {error && (
               <div className="p-3 rounded-xl bg-[#FEF2F2] border border-red-200 text-xs text-[#991B1B]">
                 {error}
               </div>
             )}
 
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => submitToAgent()}
-              className="w-full py-3 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-50 text-white text-sm font-semibold transition-colors"
-            >
-              {loading ? "Checking Receipt & Budget..." : "Submit to AI & Vault"}
-            </button>
+            {/* Step 4: Submit Button */}
+            <div className="pt-1">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => submitToAgent()}
+                className="w-full py-3 px-5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-50 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>
+                  {loading
+                    ? "Checking Receipt & Budget..."
+                    : "Verify & Pay Expense"}
+                </span>
+              </button>
+            </div>
           </div>
 
-          {/* Right Verification Panel */}
-          <div className="lg:col-span-5 bg-white rounded-2xl border border-[#E2E8F0] p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0]">
+          {/* Right (5 cols): Guarded Agent Verification Panel */}
+          <div className="xl:col-span-5 bg-white rounded-2xl border border-[#E2E8F0] p-5 sm:p-6 space-y-5">
+            <div className="flex items-center justify-between pb-4 border-b border-[#E2E8F0]">
               <div>
-                <h3 className="text-sm font-bold">Verification Result</h3>
-                <p className="text-[11px] text-[#64748B]">
+                <h3 className="text-base font-bold text-[#0F172A]">
+                  Guarded Agent Verification
+                </h3>
+                <p className="text-[13px] text-[#64748B]">
                   {result
-                    ? `AI: ${result.aiMode.toUpperCase()} • Chain: ${
+                    ? `AI: ${result.aiMode.toUpperCase()} · Chain: ${
                         result.chainMode === "bscTestnet"
-                          ? "BSC Testnet"
-                          : "Simulated"
+                          ? "BSC Testnet (97)"
+                          : "Local"
                       }`
-                    : "Waiting for submission"}
+                    : "Receipt uniqueness, budget cap & vendor allowlist"}
                 </p>
               </div>
-              {result && (
-                <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#F8FAFC] border border-[#E2E8F0]">
-                  {result.status.replace("_", " ")}
-                </span>
-              )}
             </div>
 
-            <div className="space-y-2 text-xs">
-              <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between">
-                <span>1. Receipt read</span>
-                <span className="font-semibold">
-                  {result?.extracted
-                    ? `${result.extracted.vendor} • ${formatPeso(
+            {/* 4 Clear Status Rows */}
+            <div className="space-y-3">
+              <CheckRow
+                num="1"
+                state={row1State}
+                title="Receipt read & duplicate check"
+                desc={
+                  result?.extracted
+                    ? `${result.extracted.vendor} · ${formatPeso(
                         result.extracted.totalPesos
                       )}`
-                    : "Pending"}
-                </span>
-              </div>
-              <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between">
-                <span>2. Budget &amp; recipient checked</span>
-                <span className="font-semibold">
-                  {result?.proposed
-                    ? `${result.proposed.category} → ${result.proposed.recipientLabel}`
-                    : result
-                    ? "Needs review"
-                    : "Pending"}
-                </span>
-              </div>
-              <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between">
-                <span>3. Contract enforcement</span>
-                <span className="font-semibold">
-                  {result?.status === "executed"
-                    ? "Payment Approved"
-                    : result?.status === "blocked" ||
-                      result?.status === "forced_failed_tx"
-                    ? "Payment Blocked"
-                    : result?.status === "needs_confirmation"
-                    ? "Awaiting Confirm"
-                    : result
-                    ? "Human Review"
-                    : "Pending"}
-                </span>
-              </div>
+                    : "Extracts vendor, total, date, and checks keccak256 nonce"
+                }
+              />
+              <CheckRow
+                num="2"
+                state={row2State}
+                title="Category budget check"
+                desc={
+                  result?.proposed
+                    ? `${result.proposed.category} budget verified`
+                    : "Compares amount against remaining category spending cap"
+                }
+              />
+              <CheckRow
+                num="3"
+                state={row3State}
+                title="Approved recipient check"
+                desc={
+                  result?.proposed
+                    ? `${result.proposed.recipientLabel} (${
+                        result.proposed.kind === 1 ? "Officer" : "Vendor"
+                      })`
+                    : "Matches vendor or officer label to on-chain allowlist"
+                }
+              />
+              <CheckRow
+                num="4"
+                state={row4State}
+                title="Settlement decision"
+                desc={
+                  isSuccess
+                    ? "Payment Approved & executed on BSC Testnet"
+                    : isConfirm
+                    ? "Waiting for officer confirmation"
+                    : isBlocked
+                    ? "Payment Blocked by policy / contract"
+                    : "Awaiting receipt submission"
+                }
+              />
             </div>
 
             {result && (
@@ -352,39 +505,51 @@ export default function SubmitReceiptPage() {
                 )}
 
                 {result.explorerUrl && (
-                  <a
-                    href={result.explorerUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block text-xs font-semibold underline"
-                  >
-                    View Transaction on BscScan ↗
-                  </a>
+                  <div className="pt-1">
+                    <a
+                      href={result.explorerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-semibold underline"
+                    >
+                      View Transaction on BscScan ↗
+                    </a>
+                  </div>
                 )}
               </div>
             )}
 
-            {/* Collapsible Technical Details */}
+            {/* Expandable Technical Details Accordion */}
             <div className="border border-[#E2E8F0] rounded-xl overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowTech(!showTech)}
-                className="w-full px-4 py-2.5 bg-[#F8FAFC] text-left text-xs font-medium text-[#64748B] flex items-center justify-between"
+                className="w-full px-4 py-3 bg-[#F8FAFC] hover:bg-slate-100/80 text-left text-xs font-medium text-[#64748B] flex items-center justify-between transition-colors"
               >
-                <span>Technical Details</span>
-                <span>{showTech ? "Hide" : "Show"}</span>
+                <span>Technical Details (EIP-712 &amp; keccak256)</span>
+                <svg
+                  className={`w-4 h-4 transition-transform ${
+                    showTech ? "rotate-180" : ""
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
               {showTech && (
-                <div className="p-4 text-[11px] space-y-2 border-t border-[#E2E8F0] bg-white">
+                <div className="p-4 text-[11px] space-y-2.5 border-t border-[#E2E8F0] bg-white">
                   <div>
                     <div className="text-[#64748B]">Receipt Hash (keccak256)</div>
-                    <div className="font-mono break-all">
+                    <div className="font-mono break-all mt-0.5">
                       {result?.receiptHash || "—"}
                     </div>
                   </div>
                   <div>
                     <div className="text-[#64748B]">EIP-712 Attestor</div>
-                    <div className="font-mono break-all">
+                    <div className="font-mono break-all mt-0.5">
                       {result?.attestorAddress || "—"}
                     </div>
                   </div>
@@ -405,5 +570,45 @@ export default function SubmitReceiptPage() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+function CheckRow({
+  num,
+  state,
+  title,
+  desc,
+}: {
+  num: string;
+  state: "idle" | "pass" | "fail";
+  title: string;
+  desc: string;
+}) {
+  const rowCls =
+    state === "pass"
+      ? "bg-[#ECFDF5]/60 border-emerald-200"
+      : state === "fail"
+      ? "bg-[#FEF2F2]/70 border-red-200"
+      : "bg-[#F8FAFC] border-[#E2E8F0]";
+
+  const iconCls =
+    state === "pass"
+      ? "bg-[#10B981] text-white"
+      : state === "fail"
+      ? "bg-[#EF4444] text-white"
+      : "bg-slate-200 text-[#64748B]";
+
+  return (
+    <div className={`p-3 rounded-xl border flex items-start gap-3 ${rowCls}`}>
+      <div
+        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${iconCls}`}
+      >
+        {state === "pass" ? "✓" : state === "fail" ? "!" : num}
+      </div>
+      <div className="min-w-0">
+        <div className="text-[13px] font-semibold text-[#0F172A]">{title}</div>
+        <div className="text-xs text-[#64748B] mt-0.5">{desc}</div>
+      </div>
+    </div>
   );
 }
