@@ -404,7 +404,7 @@ export default function SubmitReceiptPage() {
 
           {/* Right (5 cols): Guarded Agent Verification Panel */}
           <div className="xl:col-span-5 bg-white rounded-2xl border border-[#E2E8F0] p-5 sm:p-6 space-y-5">
-            <div className="flex items-center justify-between pb-4 border-b border-[#E2E8F0]">
+            <div className="flex items-center justify-between gap-3 pb-4 border-b border-[#E2E8F0]">
               <div>
                 <h3 className="text-base font-bold text-[#0F172A]">
                   Guarded Agent Verification
@@ -419,6 +419,11 @@ export default function SubmitReceiptPage() {
                     : "Receipt uniqueness, budget cap & vendor allowlist"}
                 </p>
               </div>
+              <img
+                src="/mascot.png"
+                alt="OrgVault AI Mascot"
+                className="w-12 h-12 object-contain shrink-0"
+              />
             </div>
 
             {/* 4 Clear Status Rows */}

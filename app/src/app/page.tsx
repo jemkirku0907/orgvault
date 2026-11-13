@@ -768,8 +768,15 @@ export default function LandingPage() {
               </div>
 
               <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6">
-                <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] text-[#2563EB] font-semibold text-sm flex items-center justify-center mb-4">
-                  2
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] text-[#2563EB] font-semibold text-sm flex items-center justify-center">
+                    2
+                  </div>
+                  <img
+                    src="/mascot.png"
+                    alt="OrgVault AI Mascot"
+                    className="w-11 h-11 object-contain shrink-0"
+                  />
                 </div>
                 <h3 className="text-base font-semibold">AI Receipt Check &amp; EIP-712</h3>
                 <p className="mt-2 text-[14px] text-[#64748B] leading-relaxed">
@@ -805,6 +812,18 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      <Link
+        href="/submit"
+        aria-label="OrgVault AI Assistant"
+        className="fixed bottom-4 right-4 z-40 rounded-2xl bg-white/95 backdrop-blur border border-[#E2E8F0] p-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all"
+      >
+        <img
+          src="/mascot.png"
+          alt="OrgVault Mascot"
+          className="w-11 h-11 sm:w-12 sm:h-12 object-contain"
+        />
+      </Link>
 
       {showGoogleModal && renderGoogleModal()}
     </div>

@@ -271,6 +271,19 @@ export default function AppShell({
           {children}
         </main>
       </div>
+
+      {/* Bottom-Right Mascot Companion */}
+      <Link
+        href="/submit"
+        aria-label="OrgVault AI Assistant"
+        className="fixed bottom-4 right-4 z-40 group flex items-center gap-2 rounded-2xl bg-white/95 backdrop-blur border border-[#E2E8F0] p-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all"
+      >
+        <img
+          src="/mascot.png"
+          alt="OrgVault Mascot"
+          className="w-11 h-11 sm:w-12 sm:h-12 object-contain"
+        />
+      </Link>
     </div>
   );
 }
