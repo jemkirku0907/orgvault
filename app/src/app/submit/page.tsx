@@ -104,6 +104,20 @@ export default function SubmitReceiptPage() {
     loadSummary();
   }, []);
 
+  const handleFileSelect = (nextFile: File | null) => {
+    setFile(nextFile);
+    setResult(null);
+    setError(null);
+    if (nextFile) {
+      const isPresetRequest = Object.values(PRESETS).some(
+        (p) => p.requestText === requestText
+      );
+      if (isPresetRequest) {
+        setRequestText("");
+      }
+    }
+  };
+
   const applyPreset = (key: keyof typeof PRESETS) => {
     const p = PRESETS[key];
     setActivePreset(key);
@@ -401,7 +415,7 @@ export default function SubmitReceiptPage() {
                 ref={fileInputRef}
                 type="file"
                 accept="image/*,.png,.jpg,.jpeg,.webp"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
                 className="hidden"
               />
 
@@ -416,7 +430,7 @@ export default function SubmitReceiptPage() {
                   e.preventDefault();
                   setDragActive(false);
                   if (e.dataTransfer.files?.[0]) {
-                    setFile(e.dataTransfer.files[0]);
+                    handleFileSelect(e.dataTransfer.files[0]);
                   }
                 }}
                 className={`rounded-xl border-2 border-dashed p-4 transition-colors cursor-pointer ${
@@ -500,7 +514,11 @@ export default function SubmitReceiptPage() {
                 type="text"
                 value={requestText}
                 onChange={(e) => setRequestText(e.target.value)}
-                placeholder="e.g., Pay Canteen ₱350 for snacks under Food"
+                placeholder={
+                  file
+                    ? "Optional note (e.g., Team snacks under Food — leave blank to read directly from image)"
+                    : "e.g., Pay Canteen ₱350 for snacks under Food"
+                }
                 className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-brand"
               />
             </div>

@@ -6,7 +6,7 @@ import { runOrgVaultAgent } from "@/lib/ai/adapter";
 export const maxDuration = 60;
 
 const JsonBodySchema = z.object({
-  requestText: z.string().min(1, "Request description is required"),
+  requestText: z.string().optional().default(""),
   kind: z.union([z.literal(0), z.literal(1)]).default(0),
   receiptText: z.string().optional(),
   imageBase64: z.string().optional(),
@@ -14,6 +14,16 @@ const JsonBodySchema = z.object({
   confirmed: z.boolean().optional(),
   forceSendAnyway: z.boolean().optional(),
 });
+
+function resolveImageMimeType(file: File): string {
+  const raw = (file.type || "").toLowerCase().trim();
+  if (raw === "image/jpg") return "image/jpeg";
+  if (raw.startsWith("image/")) return raw;
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".png")) return "image/png";
+  if (name.endsWith(".webp")) return "image/webp";
+  return "image/jpeg";
+}
 
 export async function POST(req: Request) {
   try {
@@ -44,7 +54,7 @@ export async function POST(req: Request) {
         const bytes = new Uint8Array(await file.arrayBuffer());
         receiptHash = keccak256(bytes);
         imageBase64 = Buffer.from(bytes).toString("base64");
-        imageMimeType = file.type || "image/png";
+        imageMimeType = resolveImageMimeType(file);
       } else if (receiptText && receiptText.trim()) {
         const normalized = receiptText.trim().replace(/\r\n/g, "\n");
         receiptHash = keccak256(stringToBytes(normalized));
@@ -63,16 +73,20 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
-      requestText = parsed.data.requestText;
+      requestText = (parsed.data.requestText || "").trim();
       kind = parsed.data.kind;
       receiptText = parsed.data.receiptText;
       imageBase64 = parsed.data.imageBase64;
-      imageMimeType = parsed.data.imageMimeType;
+      imageMimeType =
+        parsed.data.imageMimeType?.toLowerCase() === "image/jpg"
+          ? "image/jpeg"
+          : parsed.data.imageMimeType;
       confirmed = Boolean(parsed.data.confirmed);
       forceSendAnyway = Boolean(parsed.data.forceSendAnyway);
 
       if (imageBase64) {
-        const bytes = Buffer.from(imageBase64, "base64");
+        const clean = imageBase64.replace(/^data:[^;]+;base64,/, "");
+        const bytes = Buffer.from(clean, "base64");
         receiptHash = keccak256(new Uint8Array(bytes));
       } else if (receiptText && receiptText.trim()) {
         const normalized = receiptText.trim().replace(/\r\n/g, "\n");
@@ -85,16 +99,20 @@ export async function POST(req: Request) {
       }
     }
 
-    if (!requestText) {
+    if (!requestText && !imageBase64 && !receiptText?.trim()) {
       return NextResponse.json(
-        { error: "Request text is required." },
+        { error: "Provide a request description or upload a receipt." },
         { status: 400 }
       );
     }
 
+    const effectiveRequestText =
+      requestText ||
+      "Verify this uploaded receipt image, extract exact vendor, date, totalPesos, and category, and check eligibility.";
+
     const result = await runOrgVaultAgent({
       receiptHash,
-      requestText,
+      requestText: effectiveRequestText,
       kind,
       receiptText,
       imageBase64,
