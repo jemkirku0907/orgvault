@@ -163,9 +163,7 @@ export default function PublicLedgerPage() {
                       colSpan={6}
                       className="py-8 text-center text-[#64748B]"
                     >
-                      {summary?.chainMode === "simulated"
-                        ? "Running in Simulated Chain Mode — deploy to BSC Testnet to stream live DuesPaid & ExpensePaid events."
-                        : "No events found in recent blocks yet."}
+                      No transactions recorded in recent blocks yet.
                     </td>
                   </tr>
                 ) : (

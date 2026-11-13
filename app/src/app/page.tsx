@@ -74,19 +74,14 @@ export default function LandingPage() {
       <main className="flex-1">
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-16 sm:pt-20 sm:pb-24 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-7 space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#EFF6FF] border border-blue-100 text-[#2563EB] text-xs font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB]" />
-              <span>BSC Testnet (Chain ID 97) • MockPHP (1 Token = ₱1.00)</span>
-            </div>
-
             <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-bold tracking-tight text-[#0F172A] leading-[1.15]">
               Transparent Budget &amp; Receipt Management for Student Orgs
             </h1>
 
             <p className="text-base sm:text-[17px] text-[#64748B] leading-relaxed max-w-xl">
-              For student org treasurers who track dues in spreadsheets and group
-              chats, OrgVault uses AI to read receipts and BNB Smart Chain to
-              enforce budgets, block duplicates, and release payouts.
+              Track org dues and expenses in pesos without spreadsheets or group
+              chat screenshots. AI reads each receipt, and BNB Smart Chain
+              enforces category budgets before any payout is released.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-1">
@@ -94,7 +89,7 @@ export default function LandingPage() {
                 href="/submit"
                 className="px-6 py-3.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-sm font-semibold transition-colors shadow-xs"
               >
-                Explore Demo →
+                Explore Demo
               </Link>
               <button
                 type="button"
@@ -114,18 +109,13 @@ export default function LandingPage() {
 
           <div className="lg:col-span-5">
             <div className="bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0] p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs font-medium text-[#64748B]">
-                    {profile.orgName}
-                  </div>
-                  <div className="font-semibold text-sm text-[#0F172A] mt-0.5">
-                    Org Treasury Snapshot
-                  </div>
+              <div>
+                <div className="text-xs font-medium text-[#64748B]">
+                  {profile.orgName}
                 </div>
-                <span className="px-2.5 py-1 rounded-full bg-[#ECFDF5] text-[#10B981] text-xs font-semibold">
-                  Contract Guarded
-                </span>
+                <div className="font-semibold text-sm text-[#0F172A] mt-0.5">
+                  Org Treasury Snapshot
+                </div>
               </div>
 
               <div className="bg-white rounded-xl border border-[#E2E8F0] p-4 space-y-3">
@@ -133,8 +123,8 @@ export default function LandingPage() {
                   <span className="text-xs font-medium text-[#64748B]">
                     Available Org Funds
                   </span>
-                  <span className="text-[11px] font-medium text-[#2563EB] bg-[#EFF6FF] px-2 py-0.5 rounded-md">
-                    MockPHP (₱)
+                  <span className="text-xs font-medium text-[#64748B]">
+                    PHP (mPHP)
                   </span>
                 </div>
                 <div className="text-3xl font-bold tabular-nums text-[#0F172A]">
@@ -156,17 +146,17 @@ export default function LandingPage() {
               <div className="bg-white rounded-xl border border-[#E2E8F0] p-4 flex items-center justify-between gap-3">
                 <div>
                   <div className="text-xs font-semibold text-[#0F172A]">
-                    Built-In Contract Rules
+                    On-Chain Spending Rules
                   </div>
                   <div className="text-xs text-[#64748B] mt-0.5">
-                    Duplicate block • Budget cap • Vendor allowlist
+                    Duplicate block, budget caps, and vendor allowlist
                   </div>
                 </div>
                 <Link
                   href="/submit"
                   className="px-3.5 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-semibold shrink-0"
                 >
-                  Open App →
+                  Open App
                 </Link>
               </div>
             </div>

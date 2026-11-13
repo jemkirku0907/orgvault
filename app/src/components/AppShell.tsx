@@ -127,13 +127,8 @@ export default function AppShell({
             <div className="text-[11px] text-[#64748B] truncate">
               {profile.university}
             </div>
-            <div className="pt-1 flex items-center gap-1.5">
-              <span className="px-2 py-0.5 rounded-md bg-[#EFF6FF] text-[#2563EB] text-[11px] font-medium">
-                @{profile.nickname}
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-[#475569] text-[11px] font-medium">
-                {profile.role}
-              </span>
+            <div className="pt-0.5 text-[11px] font-medium text-[#475569] truncate">
+              {profile.nickname} · {profile.role}
             </div>
           </div>
 
@@ -166,13 +161,10 @@ export default function AppShell({
             className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] hover:border-[#2563EB] transition-colors"
           >
             <span className="font-medium text-[#0F172A]">
-              BSC Testnet (97)
+              BSC Testnet
             </span>
             <span className="text-[#2563EB] font-semibold">BscScan ↗</span>
           </a>
-          <div className="px-3 py-1.5 text-[11px] text-[#64748B]">
-            MockPHP: 1 Token = ₱1.00
-          </div>
           <Link
             href="/"
             className="block text-center py-2 rounded-xl border border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] font-medium"
@@ -187,24 +179,11 @@ export default function AppShell({
         <header className="bg-white border-b border-[#E2E8F0]">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-lg font-bold tracking-tight">
-                  {profile.orgName}
-                </h1>
-                <span
-                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
-                    summary?.chainMode === "bscTestnet"
-                      ? "bg-[#ECFDF5] text-[#10B981]"
-                      : "bg-amber-50 text-amber-800 border border-amber-200"
-                  }`}
-                >
-                  {summary?.chainMode === "bscTestnet"
-                    ? "Live BSC Testnet"
-                    : "Simulated Chain Mode"}
-                </span>
-              </div>
+              <h1 className="text-lg font-bold tracking-tight">
+                {profile.orgName}
+              </h1>
               <p className="text-xs text-[#64748B] mt-0.5">
-                AI-checked receipts • On-chain rules on BNB Smart Chain Testnet
+                AI-checked receipts &amp; on-chain treasury rules
               </p>
             </div>
 
