@@ -8,6 +8,7 @@ import {
   type Address,
 } from "viem";
 import AppShell from "@/components/AppShell";
+import JargonTooltip from "@/components/JargonTooltip";
 import {
   CATEGORIES,
   categoryId,
@@ -18,6 +19,7 @@ import {
   orgVaultChain,
 } from "@/lib/contracts";
 import type { VaultSummary } from "@/lib/chain/vault";
+import type { ReimbursementClaim } from "@/lib/reimbursements/store";
 
 declare global {
   interface Window {
@@ -29,6 +31,7 @@ declare global {
 
 export default function AdminControlsPage() {
   const [summary, setSummary] = useState<VaultSummary | null>(null);
+  const [claims, setClaims] = useState<ReimbursementClaim[]>([]);
   const [account, setAccount] = useState<Address | null>(null);
   const [chainId, setChainId] = useState<number | null>(null);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
@@ -51,10 +54,89 @@ export default function AdminControlsPage() {
 
   const loadSummary = async () => {
     try {
-      const res = await fetch("/api/vault/summary");
-      if (res.ok) setSummary(await res.json());
+      const [sumRes, clmRes] = await Promise.all([
+        fetch("/api/vault/summary"),
+        fetch("/api/reimbursements"),
+      ]);
+      if (sumRes.ok) setSummary(await sumRes.json());
+      if (clmRes.ok) {
+        const data = await clmRes.json();
+        setClaims(data.claims ?? []);
+      }
     } catch {
       // ignore
+    }
+  };
+
+  const updateClaim = async (
+    id: string,
+    status: ReimbursementClaim["status"],
+    txHash?: string
+  ) => {
+    setBusy(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch("/api/reimbursements", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          status,
+          txHash,
+          explorerUrl: txHash ? `${EXPLORER_BASE}/tx/${txHash}` : undefined,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setErrorMsg(data.error || "Failed to update claim");
+      } else {
+        setStatusMsg(`Claim ${id} marked as ${status}.`);
+        if (txHash) setTxLink(`${EXPLORER_BASE}/tx/${txHash}`);
+        await loadSummary();
+      }
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Failed to update claim");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const fulfillClaimOnBsc = async (claim: ReimbursementClaim) => {
+    if (!window.ethereum || !account) {
+      setErrorMsg("Connect your BSC Testnet wallet first to send MockPHP.");
+      return;
+    }
+    if (chainId !== CHAIN_ID) {
+      setErrorMsg("Switch your wallet to BSC Testnet (Chain ID 97) first.");
+      return;
+    }
+    if (!mockPhpAddr) {
+      setErrorMsg("MockPHP contract address is not configured.");
+      return;
+    }
+    setBusy(true);
+    setErrorMsg(null);
+    setStatusMsg(`Sending ₱${claim.amount} MockPHP on BSC Testnet...`);
+    try {
+      const walletClient = createWalletClient({
+        account,
+        chain: orgVaultChain,
+        transport: custom(window.ethereum),
+      });
+      const hash = await walletClient.writeContract({
+        address: mockPhpAddr,
+        abi: MOCK_PHP_ABI,
+        functionName: "transfer",
+        args: [
+          claim.payoutAccountLabel as Address,
+          parseEther(String(claim.amount)),
+        ],
+      });
+      await updateClaim(claim.id, "Paid", hash);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "BSC payout failed");
+      setStatusMsg(null);
+      setBusy(false);
     }
   };
 
@@ -221,10 +303,142 @@ export default function AdminControlsPage() {
           </div>
         )}
 
+        {/* Reimbursement Approval & Payout Queue */}
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-[#E2E8F0]">
+            <div>
+              <h3 className="text-sm font-bold text-[#0F172A]">
+                Reimbursement Approval Queue
+              </h3>
+              <p className="text-xs text-[#64748B]">
+                Review{" "}
+                <span className="font-medium text-[#0F172A]">Itemized Receipt</span>
+                <JargonTooltip term="Itemized Receipt" /> claims and fulfill via{" "}
+                <span className="font-medium text-[#0F172A]">QR Code Transfer</span>
+                <JargonTooltip term="QR Code Transfer" /> or{" "}
+                <span className="font-medium text-[#0F172A]">BSC</span>
+                <JargonTooltip term="BSC" />.
+              </p>
+            </div>
+            <span className="text-xs font-medium text-[#64748B]">
+              {claims.length} total claims
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {claims.map((claim) => (
+              <div
+                key={claim.id}
+                className="p-4 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC]/60 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-mono font-bold text-[#0F172A]">
+                      {claim.id}
+                    </span>
+                    <span className="text-xs font-semibold text-[#0F172A]">
+                      {claim.memberName}
+                    </span>
+                    <span className="text-xs font-bold tabular-nums text-[#2563EB]">
+                      ₱{claim.amount.toFixed(2)}
+                    </span>
+                    <span className="text-[11px] text-[#64748B]">
+                      · Cost Center
+                      <JargonTooltip term="Cost Center" />: {claim.category} (
+                      {claim.expenseType})
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#64748B]">
+                    {claim.notes || claim.receiptName} · {claim.date} ·{" "}
+                    <span className="font-mono text-[11px]">
+                      {claim.payoutAccountLabel}
+                    </span>
+                  </p>
+                  {claim.qrImageDataUrl && (
+                    <img
+                      src={claim.qrImageDataUrl}
+                      alt="Member payout QR"
+                      className="mt-1.5 w-20 h-20 rounded-lg border border-[#E2E8F0] object-cover bg-white"
+                    />
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap shrink-0">
+                  <span className="px-2.5 py-1 rounded-lg border border-[#E2E8F0] bg-white text-[11px] font-semibold">
+                    {claim.status}
+                  </span>
+
+                  {claim.status === "Pending" && (
+                    <>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => updateClaim(claim.id, "Approved")}
+                        className="px-3 py-1.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-semibold"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => updateClaim(claim.id, "Rejected")}
+                        className="px-3 py-1.5 rounded-xl border border-red-200 bg-[#FEF2F2] hover:bg-red-100 text-[#991B1B] text-xs font-semibold"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
+
+                  {claim.status === "Approved" && (
+                    <>
+                      {claim.payoutMethod === "bsc_wallet" && (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => fulfillClaimOnBsc(claim)}
+                          className="px-3 py-1.5 rounded-xl bg-[#10B981] hover:bg-emerald-600 text-white text-xs font-semibold"
+                        >
+                          Pay via BSC Wallet
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => updateClaim(claim.id, "Paid")}
+                        className="px-3 py-1.5 rounded-xl border border-[#E2E8F0] bg-white hover:bg-slate-50 text-[#0F172A] text-xs font-semibold"
+                      >
+                        {claim.payoutMethod === "qr_transfer"
+                          ? "Mark Paid (QR Sent)"
+                          : "Mark Paid"}
+                      </button>
+                    </>
+                  )}
+
+                  {claim.status === "Paid" && claim.txHash && (
+                    <a
+                      href={
+                        claim.explorerUrl || `${EXPLORER_BASE}/tx/${claim.txHash}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-semibold text-[#2563EB] hover:underline"
+                    >
+                      BscScan ↗
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Mint & Pay Dues */}
           <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 space-y-4">
-            <h3 className="text-sm font-bold">Member Dues (MockPHP)</h3>
+            <h3 className="text-sm font-bold">
+              Member Dues (MockPHP
+              <JargonTooltip term="MockPHP" />)
+            </h3>
             <div className="flex gap-2">
               <input
                 type="number"

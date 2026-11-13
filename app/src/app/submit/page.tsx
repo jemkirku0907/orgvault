@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import AppShell from "@/components/AppShell";
+import JargonTooltip from "@/components/JargonTooltip";
 import type { AgentSubmitResponse } from "@/lib/ai/types";
 import type { VaultSummary } from "@/lib/chain/vault";
 
@@ -328,7 +329,9 @@ export default function SubmitReceiptPage() {
                           : "Drop a receipt image here to parse with Gemini Vision"}
                       </div>
                       <div className="text-xs text-[#64748B]">
-                        PNG, JPG, WEBP supported · Hashed on backend via keccak256
+                        PNG, JPG, WEBP supported · Hashed on backend via{" "}
+                        <span className="font-mono">keccak256</span>
+                        <JargonTooltip term="keccak256" />
                       </div>
                     </div>
                   </div>
@@ -547,7 +550,10 @@ export default function SubmitReceiptPage() {
                 onClick={() => setShowTech(!showTech)}
                 className="w-full px-4 py-3 bg-[#F8FAFC] hover:bg-slate-100/80 text-left text-xs font-medium text-[#64748B] flex items-center justify-between transition-colors"
               >
-                <span>Technical Details (EIP-712 &amp; keccak256)</span>
+                <span className="inline-flex items-center">
+                  Technical Details (EIP-712
+                  <JargonTooltip term="EIP-712" /> &amp; keccak256)
+                </span>
                 <svg
                   className={`w-4 h-4 transition-transform ${
                     showTech ? "rotate-180" : ""
