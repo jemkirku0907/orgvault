@@ -11,7 +11,6 @@ import {
 } from "@/lib/contracts";
 import type { VaultSummary } from "@/lib/chain/vault";
 import BscWalletButton from "@/components/BscWalletButton";
-import HeaderBanner from "@/components/HeaderBanner";
 
 export interface LocalProfile {
   orgName: string;
@@ -262,8 +261,33 @@ export default function AppShell({
 
       {/* Main Content */}
       <div className="flex-1 lg:pl-[260px] flex flex-col min-h-screen">
-        {/* Animated OrgVault Header Banner */}
-        <HeaderBanner orgName={profile.orgName} university={profile.university} />
+        {/* Clean Minimal Header Bar */}
+        <header className="bg-white border-b border-[#E2E8F0]">
+          <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-[15px] font-semibold text-[#0F172A] truncate">
+                {profile.orgName}
+              </div>
+              <div className="text-xs text-[#64748B] truncate">
+                {profile.university} · MockPHP (1 Token = ₱1.00)
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Link
+                href="/pay-dues"
+                className="px-3.5 py-2 rounded-xl border border-[#2563EB]/30 bg-[#EFF6FF] hover:bg-blue-100/80 text-[#2563EB] text-[13px] font-semibold transition-colors"
+              >
+                + Pay Dues
+              </Link>
+              <Link
+                href="/submit"
+                className="px-3.5 py-2 rounded-xl bg-brand hover:opacity-90 text-white text-[13px] font-semibold transition-colors"
+              >
+                + New Claim
+              </Link>
+            </div>
+          </div>
+        </header>
 
         <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
           {/* 3 Financial Overview Cards */}

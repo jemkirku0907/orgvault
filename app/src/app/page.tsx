@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useLocalProfile } from "@/components/AppShell";
 import BscWalletButton from "@/components/BscWalletButton";
-import HeaderBanner from "@/components/HeaderBanner";
 import {
   ENV_TOKEN_ADDRESS,
   ENV_VAULT_ADDRESS,
@@ -608,8 +607,6 @@ export default function LandingPage() {
         </div>
       </header>
 
-      <HeaderBanner orgName={profile.orgName} university={profile.university} />
-
       <main className="flex-1">
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-16 sm:pt-20 sm:pb-24">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
@@ -786,15 +783,8 @@ export default function LandingPage() {
               </div>
 
               <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-9 h-9 rounded-xl bg-brand-light text-brand font-semibold text-sm flex items-center justify-center">
-                    2
-                  </div>
-                  <img
-                    src="/mascot.png"
-                    alt="OrgVault AI Mascot"
-                    className="w-11 h-11 object-contain shrink-0"
-                  />
+                <div className="w-9 h-9 rounded-xl bg-brand-light text-brand font-semibold text-sm flex items-center justify-center mb-4">
+                  2
                 </div>
                 <h3 className="text-base font-semibold">AI Receipt Check &amp; EIP-712</h3>
                 <p className="mt-2 text-[14px] text-[#64748B] leading-relaxed">
