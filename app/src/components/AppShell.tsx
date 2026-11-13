@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { EXPLORER_BASE } from "@/lib/contracts";
 import type { VaultSummary } from "@/lib/chain/vault";
 import BscWalletButton from "@/components/BscWalletButton";
+import HeaderBanner from "@/components/HeaderBanner";
 
 export interface LocalProfile {
   orgName: string;
@@ -85,13 +86,21 @@ export default function AppShell({
           </span>
           <span>OrgVault</span>
         </Link>
-        <button
-          type="button"
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="px-3 py-1.5 rounded-xl border border-[#E2E8F0] text-xs font-medium text-[#0F172A]"
-        >
-          {mobileOpen ? "Close" : "Menu"}
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/pay-dues"
+            className="px-3 py-1.5 rounded-xl bg-[#2563EB] text-white text-xs font-semibold"
+          >
+            Pay Dues
+          </Link>
+          <button
+            type="button"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="px-3 py-1.5 rounded-xl border border-[#E2E8F0] text-xs font-medium text-[#0F172A]"
+          >
+            {mobileOpen ? "Close" : "Menu"}
+          </button>
+        </div>
       </header>
 
       {/* Fixed Left Sidebar */}
@@ -128,6 +137,17 @@ export default function AppShell({
           </div>
 
           <nav className="space-y-1" aria-label="Primary">
+            <NavLink
+              href="/pay-dues"
+              active={pathname === "/pay-dues"}
+              onClick={() => setMobileOpen(false)}
+              label="Pay Dues"
+              icon={
+                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              }
+            />
             <NavLink
               href="/submit"
               active={pathname === "/submit"}
@@ -198,27 +218,8 @@ export default function AppShell({
 
       {/* Main Content */}
       <div className="flex-1 lg:pl-[260px] flex flex-col min-h-screen">
-        <header className="bg-white border-b border-[#E2E8F0]">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold tracking-tight">
-                {profile.orgName}
-              </h1>
-              <p className="text-[13px] text-[#64748B] mt-0.5">
-                {profile.university} · MockPHP (1 Token = ₱1.00)
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2.5">
-              <Link
-                href="/admin"
-                className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-[13px] font-medium transition-colors"
-              >
-                + Pay Dues
-              </Link>
-            </div>
-          </div>
-        </header>
+        {/* Animated OrgVault Header Banner */}
+        <HeaderBanner orgName={profile.orgName} university={profile.university} />
 
         <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
           {/* 3 Financial Overview Cards */}

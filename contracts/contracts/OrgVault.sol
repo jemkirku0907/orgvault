@@ -81,11 +81,13 @@ contract OrgVault is Ownable, Pausable, ReentrancyGuard, EIP712 {
     mapping(address => bool) private officerSeen;
 
     mapping(bytes32 => bool) public usedReceipts;
+    mapping(bytes32 => mapping(address => bool)) public hasPaidDuesForPeriod;
 
     error ContractPaused();
     error BadSignature();
     error Expired();
     error DuplicateReceipt();
+    error DuplicateDuesPayment(bytes32 periodId, address member);
     error VendorNotApproved();
     error OfficerNotRegistered();
     error OverOfficerCap(uint256 requested, uint256 remainingCap);
@@ -96,6 +98,7 @@ contract OrgVault is Ownable, Pausable, ReentrancyGuard, EIP712 {
     error ZeroAddress();
 
     event DuesPaid(address indexed member, uint256 amount);
+    event DuesPaidForPeriod(address indexed member, bytes32 indexed periodId, uint256 amount);
     event ExpensePaid(
         uint8 indexed kind,
         address indexed recipient,
@@ -127,6 +130,17 @@ contract OrgVault is Ownable, Pausable, ReentrancyGuard, EIP712 {
         if (amount == 0) revert ZeroAmount();
         token.safeTransferFrom(msg.sender, address(this), amount);
         emit DuesPaid(msg.sender, amount);
+    }
+
+    function payDuesForPeriod(bytes32 periodId, uint256 amount) external nonReentrant {
+        if (amount == 0) revert ZeroAmount();
+        if (hasPaidDuesForPeriod[periodId][msg.sender]) {
+            revert DuplicateDuesPayment(periodId, msg.sender);
+        }
+        hasPaidDuesForPeriod[periodId][msg.sender] = true;
+        token.safeTransferFrom(msg.sender, address(this), amount);
+        emit DuesPaid(msg.sender, amount);
+        emit DuesPaidForPeriod(msg.sender, periodId, amount);
     }
 
     function withdraw(uint256 amount) external onlyOwner nonReentrant {

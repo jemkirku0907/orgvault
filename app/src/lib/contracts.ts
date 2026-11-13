@@ -23,6 +23,10 @@ export function categoryId(name: string): `0x${string}` {
   return keccak256(toHex(name));
 }
 
+export function duesPeriodId(orgName: string, period: string): `0x${string}` {
+  return keccak256(toHex(`${orgName.trim()}:${period.trim()}`));
+}
+
 export const EXPENSE_EIP712_TYPES = {
   Expense: [
     { name: "recipient", type: "address" },
@@ -126,6 +130,14 @@ export const ORG_VAULT_ABI = [
   },
   {
     type: "error",
+    name: "DuplicateDuesPayment",
+    inputs: [
+      { name: "periodId", type: "bytes32" },
+      { name: "member", type: "address" },
+    ],
+  },
+  {
+    type: "error",
     name: "VendorNotApproved",
     inputs: [],
   },
@@ -179,6 +191,15 @@ export const ORG_VAULT_ABI = [
   },
   {
     type: "event",
+    name: "DuesPaidForPeriod",
+    inputs: [
+      { name: "member", type: "address", indexed: true },
+      { name: "periodId", type: "bytes32", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
     name: "ExpensePaid",
     inputs: [
       { name: "kind", type: "uint8", indexed: true },
@@ -196,6 +217,26 @@ export const ORG_VAULT_ABI = [
     stateMutability: "nonpayable",
     inputs: [{ name: "amount", type: "uint256" }],
     outputs: [],
+  },
+  {
+    type: "function",
+    name: "payDuesForPeriod",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "periodId", type: "bytes32" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "hasPaidDuesForPeriod",
+    stateMutability: "view",
+    inputs: [
+      { name: "periodId", type: "bytes32" },
+      { name: "member", type: "address" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
   },
   {
     type: "function",

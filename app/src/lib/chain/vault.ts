@@ -20,6 +20,7 @@ import {
   orgVaultChain,
 } from "@/lib/contracts";
 import { decodeVaultError, formatPesos } from "./errors";
+import { getExtraVaultDuesPesos } from "@/lib/dues/store";
 
 export interface BudgetView {
   category: string;
@@ -129,10 +130,11 @@ export function getPublicClient() {
 
 export async function getVaultSummary(): Promise<VaultSummary> {
   const { orgVaultAddress, mockPhpAddress } = resolveDeploymentAddresses();
+  const extraDues = getExtraVaultDuesPesos();
   if (!orgVaultAddress) {
     return {
       chainMode: "simulated",
-      vaultBalance: simState.vaultBalance,
+      vaultBalance: simState.vaultBalance + extraDues,
       paused: simState.paused,
       budgets: CATEGORIES.map((c) => {
         const b = simState.budgets.get(c) ?? { limit: 0, spent: 0 };
@@ -205,7 +207,7 @@ export async function getVaultSummary(): Promise<VaultSummary> {
     chainMode: "bscTestnet",
     orgVaultAddress,
     mockPhpAddress,
-    vaultBalance: Number(formatEther(vaultBalRaw)),
+    vaultBalance: Number(formatEther(vaultBalRaw)) + extraDues,
     paused,
     attestor,
     owner,
