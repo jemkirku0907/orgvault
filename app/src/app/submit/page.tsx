@@ -108,7 +108,6 @@ export default function SubmitReceiptPage() {
         form.append("receipt", file);
         form.append("requestText", requestText);
         form.append("kind", String(kind));
-        if (receiptText.trim()) form.append("receiptText", receiptText);
         if (opts?.confirmed) form.append("confirmed", "true");
         if (opts?.forceSendAnyway) form.append("forceSendAnyway", "true");
         res = await fetch("/api/agent/submit", { method: "POST", body: form });
@@ -333,30 +332,47 @@ export default function SubmitReceiptPage() {
                       </div>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      fileInputRef.current?.click();
-                    }}
-                    className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-[#E2E8F0] text-xs font-semibold shrink-0"
-                  >
-                    {file ? "Change File" : "Upload Receipt"}
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        fileInputRef.current?.click();
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-[#E2E8F0] text-xs font-semibold"
+                    >
+                      {file ? "Change File" : "Upload Receipt"}
+                    </button>
+                    {file && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFile(null);
+                          if (fileInputRef.current) fileInputRef.current.value = "";
+                        }}
+                        className="px-3 py-2 rounded-xl bg-white hover:bg-red-50 border border-[#E2E8F0] text-xs font-semibold text-[#64748B] hover:text-[#EF4444]"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-3">
-                <label className="block text-xs font-medium text-[#64748B] mb-1">
-                  Receipt Text (editable / fallback when no image)
-                </label>
-                <textarea
-                  rows={4}
-                  value={receiptText}
-                  onChange={(e) => setReceiptText(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] font-mono text-xs focus:outline-none focus:border-[#2563EB]"
-                />
-              </div>
+              {!file && (
+                <div className="mt-3">
+                  <label className="block text-xs font-medium text-[#64748B] mb-1">
+                    Receipt Text (editable / fallback when no image)
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={receiptText}
+                    onChange={(e) => setReceiptText(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] font-mono text-xs focus:outline-none focus:border-[#2563EB]"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Step 3: Request Description */}

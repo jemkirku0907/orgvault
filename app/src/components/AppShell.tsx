@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { EXPLORER_BASE } from "@/lib/contracts";
 import type { VaultSummary } from "@/lib/chain/vault";
+import BscWalletButton from "@/components/BscWalletButton";
 
 export interface LocalProfile {
   orgName: string;
@@ -165,6 +166,7 @@ export default function AppShell({
         </div>
 
         <div className="pt-4 border-t border-[#E2E8F0] space-y-2 text-xs">
+          <BscWalletButton />
           <a
             href={vaultUrl}
             target="_blank"
