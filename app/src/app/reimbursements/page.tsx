@@ -44,7 +44,7 @@ const METHOD_META: Record<
 
 const STATUS_BADGE: Record<ReimbursementClaim["status"], string> = {
   Pending: "bg-amber-50 text-amber-800 border-amber-200",
-  Approved: "bg-[#EFF6FF] text-[#2563EB] border-blue-200",
+  Approved: "bg-brand-light text-brand border-blue-200",
   Rejected: "bg-[#FEF2F2] text-[#991B1B] border-red-200",
   Paid: "bg-[#ECFDF5] text-[#065F46] border-emerald-200",
 };
@@ -236,7 +236,7 @@ export default function ReimbursementsPage() {
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
                 required
-                className="w-full px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-[#2563EB]"
+                className="w-full px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-brand"
               />
             </div>
             <div>
@@ -250,7 +250,7 @@ export default function ReimbursementsPage() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 required
-                className="w-full px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm tabular-nums focus:outline-none focus:border-[#2563EB]"
+                className="w-full px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm tabular-nums focus:outline-none focus:border-brand"
               />
             </div>
           </div>
@@ -266,7 +266,7 @@ export default function ReimbursementsPage() {
                 onChange={(e) =>
                   setCategory(e.target.value as "Food" | "Printing" | "Events")
                 }
-                className="w-full px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm bg-white focus:outline-none focus:border-[#2563EB]"
+                className="w-full px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm bg-white focus:outline-none focus:border-brand"
               >
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>
@@ -286,7 +286,7 @@ export default function ReimbursementsPage() {
               <select
                 value={expenseType}
                 onChange={(e) => setExpenseType(e.target.value as ExpenseType)}
-                className="w-full px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm bg-white focus:outline-none focus:border-[#2563EB]"
+                className="w-full px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm bg-white focus:outline-none focus:border-brand"
               >
                 <option value="Standard">Standard</option>
                 <option value="Per Diem">Per Diem</option>
@@ -303,7 +303,7 @@ export default function ReimbursementsPage() {
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
-                className="w-full px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-[#2563EB]"
+                className="w-full px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-brand"
               />
             </div>
           </div>
@@ -355,7 +355,7 @@ export default function ReimbursementsPage() {
                     }}
                     className={`p-3 rounded-xl border text-left cursor-pointer transition-colors ${
                       active
-                        ? "border-2 border-[#2563EB] bg-[#EFF6FF]/60"
+                        ? "border-2 border-brand bg-brand-light/60"
                         : "border-[#E2E8F0] hover:bg-[#F8FAFC]"
                     }`}
                   >
@@ -382,7 +382,7 @@ export default function ReimbursementsPage() {
                   <button
                     type="button"
                     onClick={fillConnectedWallet}
-                    className="text-[11px] font-semibold text-[#2563EB] hover:underline"
+                    className="text-[11px] font-semibold text-brand hover:underline"
                   >
                     Use Connected Wallet
                   </button>
@@ -393,7 +393,7 @@ export default function ReimbursementsPage() {
                 value={payoutAccountLabel}
                 onChange={(e) => setPayoutAccountLabel(e.target.value)}
                 placeholder={METHOD_META[payoutMethod].placeholder}
-                className="w-full px-3 py-2 rounded-xl border border-[#E2E8F0] text-xs font-mono focus:outline-none focus:border-[#2563EB]"
+                className="w-full px-3 py-2 rounded-xl border border-[#E2E8F0] text-xs font-mono focus:outline-none focus:border-brand"
               />
 
               {payoutMethod === "qr_transfer" && (
@@ -430,7 +430,7 @@ export default function ReimbursementsPage() {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Short description of what was purchased"
-              className="w-full px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-[#2563EB]"
+              className="w-full px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-brand"
             />
           </div>
 
@@ -448,7 +448,7 @@ export default function ReimbursementsPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full py-2.5 px-4 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] disabled:bg-blue-400 text-white text-sm font-semibold transition-colors"
+            className="w-full py-2.5 px-4 rounded-xl bg-brand hover:opacity-90 disabled:bg-blue-400 text-white text-sm font-semibold transition-colors"
           >
             {submitting ? "Submitting Claim..." : "Submit Reimbursement Claim"}
           </button>
@@ -532,7 +532,7 @@ export default function ReimbursementsPage() {
                         }
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-semibold text-[#2563EB] hover:underline shrink-0"
+                        className="font-semibold text-brand hover:underline shrink-0"
                       >
                         BscScan Tx ↗
                       </a>

@@ -16,19 +16,29 @@ export default function PublicLedgerPage() {
   const [summary, setSummary] = useState<VaultSummary | null>(null);
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ledgerError, setLedgerError] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
+    setLedgerError(null);
     try {
       const [sumRes, ledRes] = await Promise.all([
         fetch("/api/vault/summary"),
         fetch("/api/vault/ledger"),
       ]);
-      if (sumRes.ok) setSummary(await sumRes.json());
+      if (sumRes.ok) {
+        setSummary(await sumRes.json());
+      } else {
+        setLedgerError("Unavailable");
+      }
       if (ledRes.ok) {
         const led = await ledRes.json();
         setEntries(led.entries || []);
+      } else {
+        setLedgerError("Unavailable");
       }
+    } catch {
+      setLedgerError("Unavailable");
     } finally {
       setLoading(false);
     }
@@ -38,10 +48,13 @@ export default function PublicLedgerPage() {
     loadData();
   }, []);
 
-  const totalSpent =
-    summary?.budgets.reduce((acc, b) => acc + b.spent, 0) ?? 0;
+  const totalDues = entries
+    .filter((e) => e.type === "dues")
+    .reduce((acc, e) => acc + e.amountPesos, 0);
+  const totalSpent = entries
+    .filter((e) => e.type === "expense")
+    .reduce((acc, e) => acc + e.amountPesos, 0);
   const available = summary?.vaultBalance ?? 0;
-  const totalDues = available + totalSpent;
 
   return (
     <AppShell summary={summary}>
@@ -50,7 +63,7 @@ export default function PublicLedgerPage() {
           <div>
             <h2 className="text-lg font-bold">Public Ledger</h2>
             <p className="text-xs text-[#64748B]">
-              Transparent dues in and spending out in pesos. No wallet needed.
+              Transparent dues in and spending out in pesos from BSC Testnet logs.
             </p>
           </div>
           <button
@@ -96,7 +109,7 @@ export default function PublicLedgerPage() {
                 ? "bg-[#EF4444]"
                 : pct >= 75
                 ? "bg-[#F59E0B]"
-                : "bg-[#2563EB]";
+                : "bg-brand";
             return (
               <div
                 key={b.category}
@@ -118,7 +131,7 @@ export default function PublicLedgerPage() {
                   <span>
                     Spent {formatPeso(b.spent)} / {formatPeso(b.limit)}
                   </span>
-                  <span className="font-semibold text-[#2563EB]">
+                  <span className="font-semibold text-brand">
                     {formatPeso(b.remaining)} left
                   </span>
                 </div>
@@ -157,13 +170,22 @@ export default function PublicLedgerPage() {
                       Loading ledger events...
                     </td>
                   </tr>
+                ) : ledgerError ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="py-8 text-center text-[#EF4444] font-semibold"
+                    >
+                      {ledgerError}
+                    </td>
+                  </tr>
                 ) : entries.length === 0 ? (
                   <tr>
                     <td
                       colSpan={6}
                       className="py-8 text-center text-[#64748B]"
                     >
-                      No transactions recorded in recent blocks yet.
+                      No transactions yet
                     </td>
                   </tr>
                 ) : (
@@ -171,7 +193,7 @@ export default function PublicLedgerPage() {
                     <tr key={entry.id} className="hover:bg-[#F8FAFC]">
                       <td className="py-3 px-4 whitespace-nowrap">
                         {entry.type === "dues" ? (
-                          <span className="px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#2563EB] font-semibold">
+                          <span className="px-2 py-0.5 rounded-full bg-brand-light text-brand font-semibold">
                             Dues In
                           </span>
                         ) : (
@@ -208,7 +230,7 @@ export default function PublicLedgerPage() {
                             href={entry.explorerUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-[#2563EB] font-semibold hover:underline"
+                            className="text-brand font-semibold hover:underline"
                           >
                             View Transaction ↗
                           </a>

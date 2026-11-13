@@ -1,8 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import AppShell from "@/components/AppShell";
 import JargonTooltip from "@/components/JargonTooltip";
+import { CHAIN_ID, EXPLORER_BASE, ORG_VAULT_ABI } from "@/lib/contracts";
+import { FAUCET_URL, formatWalletError } from "@/lib/chain/walletErrors";
 import type { AgentSubmitResponse } from "@/lib/ai/types";
 import type { VaultSummary } from "@/lib/chain/vault";
 
@@ -41,7 +45,7 @@ const PRESETS = {
   },
   reimbursement: {
     label: "5. Officer Reimbursement (₱250)",
-    dot: "bg-[#2563EB]",
+    dot: "bg-brand",
     kind: 1 as const,
     requestText:
       "Reimburse TreasurerAlex ₱250 for event flyers printed under Printing.",
@@ -70,7 +74,22 @@ export default function SubmitReceiptPage() {
   const [showTech, setShowTech] = useState(false);
   const [activePreset, setActivePreset] = useState<keyof typeof PRESETS>("happy");
 
+  const { isConnected, chainId } = useAccount();
+  const publicClient = usePublicClient({ chainId: CHAIN_ID });
+  const { writeContractAsync } = useWriteContract();
+  const [walletBusy, setWalletBusy] = useState(false);
+  const [chainProof, setChainProof] = useState<{
+    txHash: string;
+    blockNumber: string;
+    explorerUrl: string;
+  } | null>(null);
+  const [errorMeta, setErrorMeta] = useState<{
+    showFaucet?: boolean;
+  } | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const wrongNetwork = isConnected && chainId !== CHAIN_ID;
+  const canTransact = isConnected && chainId === CHAIN_ID;
 
   const loadSummary = async () => {
     try {
@@ -96,12 +115,79 @@ export default function SubmitReceiptPage() {
     setError(null);
   };
 
+  const executeInWallet = async (
+    data: AgentSubmitResponse
+  ): Promise<AgentSubmitResponse> => {
+    if (!data.signedExpense || !data.signature || !data.orgVaultAddress) {
+      return data;
+    }
+    if (!canTransact) {
+      setError("Connect MetaMask on BSC Testnet (Chain ID 97) to sign and send.");
+      return data;
+    }
+
+    setWalletBusy(true);
+    try {
+      const expenseArg = {
+        recipient: data.signedExpense.recipient,
+        kind: data.signedExpense.kind,
+        amount: BigInt(data.signedExpense.amountWei),
+        category: data.signedExpense.categoryHash,
+        receiptHash: data.signedExpense.receiptHash,
+        memo: data.signedExpense.memo,
+        deadline: BigInt(data.signedExpense.deadline),
+      };
+
+      const txHash = await writeContractAsync({
+        address: data.orgVaultAddress,
+        abi: ORG_VAULT_ABI,
+        functionName: "executeExpense",
+        args: [expenseArg, data.signature],
+        chainId: CHAIN_ID,
+        ...(data.status === "forced_failed_tx" ? { gas: 300_000n } : {}),
+      });
+
+      const receipt = publicClient
+        ? await publicClient.waitForTransactionReceipt({ hash: txHash })
+        : null;
+
+      const explorerUrl = `${EXPLORER_BASE}/tx/${txHash}`;
+      setChainProof({
+        txHash,
+        blockNumber: receipt ? receipt.blockNumber.toString() : "Confirmed",
+        explorerUrl,
+      });
+
+      return {
+        ...data,
+        status: data.status === "forced_failed_tx" ? "forced_failed_tx" : "executed",
+        explanation:
+          data.status === "forced_failed_tx"
+            ? data.explanation
+            : `Approved and paid ${
+                data.proposed ? `₱${data.proposed.amountPesos.toFixed(2)}` : ""
+              } to ${data.proposed?.recipientLabel ?? "recipient"} on BSC Testnet.`,
+        txHash,
+        explorerUrl,
+      };
+    } catch (err) {
+      const parsed = formatWalletError(err);
+      setError(parsed.message);
+      setErrorMeta({ showFaucet: parsed.showFaucet });
+      return data;
+    } finally {
+      setWalletBusy(false);
+    }
+  };
+
   const submitToAgent = async (opts?: {
     confirmed?: boolean;
     forceSendAnyway?: boolean;
   }) => {
     setLoading(true);
     setError(null);
+    setErrorMeta(null);
+    setChainProof(null);
     try {
       let res: Response;
       if (file) {
@@ -125,15 +211,24 @@ export default function SubmitReceiptPage() {
           }),
         });
       }
-      const data = await res.json();
+      const data: AgentSubmitResponse & { error?: string } = await res.json();
       if (!res.ok) {
         setError(data.error || "Submission failed");
       } else {
-        setResult(data);
+        let finalData = data;
+        if (
+          data.status === "ready_for_wallet" ||
+          (data.status === "forced_failed_tx" && data.signedExpense && !data.txHash)
+        ) {
+          finalData = await executeInWallet(data);
+        }
+        setResult(finalData);
         await loadSummary();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error");
+      const parsed = formatWalletError(err);
+      setError(parsed.message);
+      setErrorMeta({ showFaucet: parsed.showFaucet });
     } finally {
       setLoading(false);
     }
@@ -212,7 +307,7 @@ export default function SubmitReceiptPage() {
                   onClick={() => applyPreset(key)}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors border ${
                     selected
-                      ? "bg-[#EFF6FF] border-[#2563EB] text-[#2563EB]"
+                      ? "bg-brand-light border-brand text-brand"
                       : "bg-[#F8FAFC] hover:bg-slate-100 border-[#E2E8F0] text-[#475569]"
                   }`}
                 >
@@ -232,14 +327,29 @@ export default function SubmitReceiptPage() {
                 Receipt Submission
               </h2>
               <p className="text-[13px] text-[#64748B]">
-                No wallet needed. AI reads the receipt, checks the budget, and submits a signed attestation.
+                Connect your wallet to sign and pay gas with tBNB.
               </p>
             </div>
+
+            {summary &&
+              (!summary.attestor ||
+                summary.attestor ===
+                  "0x0000000000000000000000000000000000000000") && (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
+                  Warning: OrgVault attestor address is not set yet. Ask the owner to call setAttestor in /admin.
+                </div>
+              )}
+
+            {wrongNetwork && (
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
+                Wrong network detected. Use &ldquo;Switch to BSC Testnet&rdquo; in the sidebar to enable transactions.
+              </div>
+            )}
 
             {/* Step 1: Payout Type */}
             <div>
               <label className="flex items-center gap-2 text-[13px] font-semibold text-[#0F172A] mb-2.5">
-                <span className="w-5 h-5 rounded-full bg-[#EFF6FF] text-[#2563EB] text-xs font-bold inline-flex items-center justify-center">
+                <span className="w-5 h-5 rounded-full bg-brand-light text-brand text-xs font-bold inline-flex items-center justify-center">
                   1
                 </span>
                 <span>Select payout type</span>
@@ -250,7 +360,7 @@ export default function SubmitReceiptPage() {
                   onClick={() => setKind(0)}
                   className={`p-3 rounded-xl border text-left transition-colors ${
                     kind === 0
-                      ? "border-2 border-[#2563EB] bg-[#EFF6FF]/60"
+                      ? "border-2 border-brand bg-brand-light/60"
                       : "border-[#E2E8F0] hover:bg-[#F8FAFC]"
                   }`}
                 >
@@ -264,7 +374,7 @@ export default function SubmitReceiptPage() {
                   onClick={() => setKind(1)}
                   className={`p-3 rounded-xl border text-left transition-colors ${
                     kind === 1
-                      ? "border-2 border-[#2563EB] bg-[#EFF6FF]/60"
+                      ? "border-2 border-brand bg-brand-light/60"
                       : "border-[#E2E8F0] hover:bg-[#F8FAFC]"
                   }`}
                 >
@@ -281,7 +391,7 @@ export default function SubmitReceiptPage() {
             {/* Step 2: Upload Receipt or Edit Text */}
             <div>
               <label className="flex items-center gap-2 text-[13px] font-semibold text-[#0F172A] mb-2.5">
-                <span className="w-5 h-5 rounded-full bg-[#EFF6FF] text-[#2563EB] text-xs font-bold inline-flex items-center justify-center">
+                <span className="w-5 h-5 rounded-full bg-brand-light text-brand text-xs font-bold inline-flex items-center justify-center">
                   2
                 </span>
                 <span>Upload receipt image or paste text</span>
@@ -311,13 +421,13 @@ export default function SubmitReceiptPage() {
                 }}
                 className={`rounded-xl border-2 border-dashed p-4 transition-colors cursor-pointer ${
                   dragActive
-                    ? "border-[#2563EB] bg-[#EFF6FF]/40"
-                    : "border-[#CBD5E1] hover:border-[#2563EB] bg-[#F8FAFC]/70"
+                    ? "border-brand bg-brand-light/40"
+                    : "border-[#CBD5E1] hover:border-brand bg-[#F8FAFC]/70"
                 }`}
               >
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div className="flex items-center gap-3 text-center sm:text-left">
-                    <div className="w-10 h-10 rounded-xl bg-white border border-[#E2E8F0] text-[#2563EB] flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-[#E2E8F0] text-brand flex items-center justify-center shrink-0">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                       </svg>
@@ -372,7 +482,7 @@ export default function SubmitReceiptPage() {
                     rows={4}
                     value={receiptText}
                     onChange={(e) => setReceiptText(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] font-mono text-xs focus:outline-none focus:border-[#2563EB]"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] font-mono text-xs focus:outline-none focus:border-brand"
                   />
                 </div>
               )}
@@ -381,7 +491,7 @@ export default function SubmitReceiptPage() {
             {/* Step 3: Request Description */}
             <div>
               <label className="flex items-center gap-2 text-[13px] font-semibold text-[#0F172A] mb-2">
-                <span className="w-5 h-5 rounded-full bg-[#EFF6FF] text-[#2563EB] text-xs font-bold inline-flex items-center justify-center">
+                <span className="w-5 h-5 rounded-full bg-brand-light text-brand text-xs font-bold inline-flex items-center justify-center">
                   3
                 </span>
                 <span>Describe request for the treasurer</span>
@@ -391,30 +501,46 @@ export default function SubmitReceiptPage() {
                 value={requestText}
                 onChange={(e) => setRequestText(e.target.value)}
                 placeholder="e.g., Pay Canteen ₱350 for snacks under Food"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-[#2563EB]"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-brand"
               />
             </div>
 
             {error && (
-              <div className="p-3 rounded-xl bg-[#FEF2F2] border border-red-200 text-xs text-[#991B1B]">
-                {error}
+              <div className="p-3 rounded-xl bg-[#FEF2F2] border border-red-200 text-xs text-[#991B1B] space-y-1">
+                <div>{error}</div>
+                {errorMeta?.showFaucet && (
+                  <a
+                    href={FAUCET_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block font-semibold underline"
+                  >
+                    Get free tBNB from BSC Testnet Faucet ↗
+                  </a>
+                )}
               </div>
             )}
 
             {/* Step 4: Submit Button */}
-            <div className="pt-1">
+            <div className="pt-1 space-y-2">
               <button
                 type="button"
-                disabled={loading}
+                disabled={loading || walletBusy || !canTransact}
                 onClick={() => submitToAgent()}
-                className="w-full py-3 px-5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-50 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 px-5 rounded-xl bg-brand hover:opacity-90 disabled:opacity-50 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span>
-                  {loading
+                  {walletBusy
+                    ? "Confirm in MetaMask..."
+                    : loading
                     ? "Checking Receipt & Budget..."
+                    : !isConnected
+                    ? "Connect BSC Wallet to Submit"
+                    : wrongNetwork
+                    ? "Switch to BSC Testnet to Submit"
                     : "Verify & Pay Expense"}
                 </span>
               </button>
@@ -430,11 +556,9 @@ export default function SubmitReceiptPage() {
                 </h3>
                 <p className="text-[13px] text-[#64748B]">
                   {result
-                    ? `AI: ${result.aiMode.toUpperCase()} · Chain: ${
-                        result.chainMode === "bscTestnet"
-                          ? "BSC Testnet (97)"
-                          : "Local"
-                      }`
+                    ? result.aiMode === "gemini"
+                      ? "Live AI (Gemini) · BSC Testnet (97)"
+                      : "AI input: demo (mock). Transaction: real."
                     : "Receipt uniqueness, budget cap & vendor allowlist"}
                 </p>
               </div>
@@ -499,6 +623,13 @@ export default function SubmitReceiptPage() {
 
             {result && (
               <div className={`p-4 rounded-xl border space-y-3 ${statusTone}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-white/80 border border-current/20">
+                    {result.aiMode === "gemini"
+                      ? "Live AI (Gemini)"
+                      : "AI input: demo (mock). Transaction: real."}
+                  </span>
+                </div>
                 <div className="text-xs font-medium leading-relaxed">
                   {result.explanation}
                 </div>
@@ -506,11 +637,28 @@ export default function SubmitReceiptPage() {
                 {result.status === "needs_confirmation" && (
                   <button
                     type="button"
-                    disabled={loading}
+                    disabled={loading || walletBusy || !canTransact}
                     onClick={() => submitToAgent({ confirmed: true })}
-                    className="w-full py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-semibold"
+                    className="w-full py-2 rounded-xl bg-brand hover:opacity-90 disabled:opacity-50 text-white text-xs font-semibold"
                   >
                     Confirm &amp; Sign Payment
+                  </button>
+                )}
+
+                {result.status === "ready_for_wallet" && (
+                  <button
+                    type="button"
+                    disabled={walletBusy || !canTransact}
+                    onClick={async () => {
+                      const updated = await executeInWallet(result);
+                      setResult(updated);
+                      await loadSummary();
+                    }}
+                    className="w-full py-2 rounded-xl bg-brand hover:opacity-90 disabled:opacity-50 text-white text-xs font-semibold"
+                  >
+                    {walletBusy
+                      ? "Waiting for MetaMask..."
+                      : "Sign & Execute in MetaMask"}
                   </button>
                 )}
 
@@ -518,7 +666,7 @@ export default function SubmitReceiptPage() {
                   result.status === "needs_review") && (
                   <button
                     type="button"
-                    disabled={loading}
+                    disabled={loading || walletBusy || !canTransact}
                     onClick={() =>
                       submitToAgent({ confirmed: true, forceSendAnyway: true })
                     }
@@ -528,13 +676,54 @@ export default function SubmitReceiptPage() {
                   </button>
                 )}
 
-                {result.explorerUrl && (
-                  <div className="pt-1">
+                {(chainProof || result.txHash) && (
+                  <div className="p-4 rounded-xl bg-white border border-slate-300 text-[#0F172A] space-y-2 print:border-black print:shadow-none">
+                    <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200 print:border-black">
+                      <div className="flex items-center gap-2">
+                        <Image
+                          src="/logo-blue.png"
+                          alt="OrgVault logo"
+                          width={24}
+                          height={24}
+                          className="w-6 h-6 object-contain print:grayscale"
+                        />
+                        <div>
+                          <div className="text-xs font-bold leading-tight">
+                            Official On-Chain Receipt
+                          </div>
+                          <div className="text-[11px] text-[#64748B] print:text-black">
+                            OrgVault · BSC Testnet (Chain 97)
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => window.print()}
+                        className="px-2.5 py-1 rounded-lg border border-slate-300 text-[11px] font-semibold hover:bg-slate-50 print:hidden"
+                      >
+                        Print Receipt
+                      </button>
+                    </div>
+                    <div className="text-[11px] font-bold uppercase tracking-wide text-brand print:text-black">
+                      Chain proof (BSC Testnet)
+                    </div>
+                    <div className="text-[11px] font-mono break-all">
+                      Tx: {chainProof?.txHash || result.txHash}
+                    </div>
+                    {chainProof?.blockNumber && (
+                      <div className="text-[11px] text-[#64748B] print:text-black">
+                        Block #{chainProof.blockNumber}
+                      </div>
+                    )}
                     <a
-                      href={result.explorerUrl}
+                      href={
+                        chainProof?.explorerUrl ||
+                        result.explorerUrl ||
+                        `${EXPLORER_BASE}/tx/${result.txHash}`
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs font-semibold underline"
+                      className="inline-block text-xs font-semibold text-brand underline print:text-black"
                     >
                       View Transaction on BscScan ↗
                     </a>

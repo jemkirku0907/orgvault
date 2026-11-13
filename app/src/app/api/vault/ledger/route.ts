@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { formatEther, parseAbiItem } from "viem";
-import { CATEGORIES, categoryId, EXPLORER_BASE } from "@/lib/contracts";
+import {
+  CATEGORIES,
+  categoryId,
+  DEPLOY_BLOCK,
+  EXPLORER_BASE,
+} from "@/lib/contracts";
 import { getPublicClient, resolveDeploymentAddresses } from "@/lib/chain/vault";
 
 export const dynamic = "force-dynamic";
@@ -26,17 +31,18 @@ const categoryLookup = new Map<string, string>(
 export async function GET() {
   const { orgVaultAddress } = resolveDeploymentAddresses();
   if (!orgVaultAddress) {
-    return NextResponse.json({
-      chainMode: "simulated",
-      entries: [] as LedgerEntry[],
-    });
+    return NextResponse.json(
+      { error: "NEXT_PUBLIC_VAULT_ADDRESS is not configured" },
+      { status: 500 }
+    );
   }
 
   try {
     const client = getPublicClient();
     const latestBlock = await client.getBlockNumber();
-    const fromBlock = latestBlock > 20_000n ? latestBlock - 20_000n : 0n;
-    const chunkSize = 2_000n;
+    const minWindow = latestBlock > 50_000n ? latestBlock - 50_000n : 0n;
+    const fromBlock = DEPLOY_BLOCK > minWindow ? DEPLOY_BLOCK : minWindow;
+    const chunkSize = 5_000n;
 
     const duesEvent = parseAbiItem("event DuesPaid(address indexed member, uint256 amount)");
     const expenseEvent = parseAbiItem(

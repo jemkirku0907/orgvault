@@ -1,12 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  createWalletClient,
-  custom,
-  parseEther,
-  type Address,
-} from "viem";
+import { parseEther, type Address } from "viem";
+import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import AppShell from "@/components/AppShell";
 import JargonTooltip from "@/components/JargonTooltip";
 import {
@@ -18,25 +14,30 @@ import {
   ORG_VAULT_ABI,
   orgVaultChain,
 } from "@/lib/contracts";
+import {
+  FAUCET_URL,
+  formatWalletError,
+  switchOrAddBscTestnet,
+} from "@/lib/chain/walletErrors";
+import { decodeVaultError } from "@/lib/chain/errors";
 import type { VaultSummary } from "@/lib/chain/vault";
 import type { ReimbursementClaim } from "@/lib/reimbursements/store";
 
-declare global {
-  interface Window {
-    ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-    };
-  }
-}
-
 export default function AdminControlsPage() {
+  const { address: account, chainId, isConnected } = useAccount();
+  const publicClient = usePublicClient({ chainId: CHAIN_ID });
+  const { writeContractAsync } = useWriteContract();
   const [summary, setSummary] = useState<VaultSummary | null>(null);
   const [claims, setClaims] = useState<ReimbursementClaim[]>([]);
-  const [account, setAccount] = useState<Address | null>(null);
-  const [chainId, setChainId] = useState<number | null>(null);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showFaucet, setShowFaucet] = useState(false);
   const [txLink, setTxLink] = useState<string | null>(null);
+  const [chainProof, setChainProof] = useState<{
+    txHash: string;
+    blockNumber: string;
+    explorerUrl: string;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
 
   // Form states
@@ -102,7 +103,7 @@ export default function AdminControlsPage() {
   };
 
   const fulfillClaimOnBsc = async (claim: ReimbursementClaim) => {
-    if (!window.ethereum || !account) {
+    if (!isConnected || !account) {
       setErrorMsg("Connect your BSC Testnet wallet first to send MockPHP.");
       return;
     }
@@ -116,25 +117,35 @@ export default function AdminControlsPage() {
     }
     setBusy(true);
     setErrorMsg(null);
-    setStatusMsg(`Sending ₱${claim.amount} MockPHP on BSC Testnet...`);
+    setShowFaucet(false);
+    setStatusMsg(`Simulating & sending ₱${claim.amount} MockPHP on BSC Testnet...`);
     try {
-      const walletClient = createWalletClient({
-        account,
-        chain: orgVaultChain,
-        transport: custom(window.ethereum),
-      });
-      const hash = await walletClient.writeContract({
+      const req = {
         address: mockPhpAddr,
         abi: MOCK_PHP_ABI,
-        functionName: "transfer",
+        functionName: "transfer" as const,
         args: [
           claim.payoutAccountLabel as Address,
           parseEther(String(claim.amount)),
-        ],
+        ] as const,
+      };
+      if (publicClient) {
+        await publicClient.simulateContract({ ...req, account });
+      }
+      const hash = await writeContractAsync({ ...req, chainId: CHAIN_ID });
+      const receipt = publicClient
+        ? await publicClient.waitForTransactionReceipt({ hash })
+        : null;
+      setChainProof({
+        txHash: hash,
+        blockNumber: receipt ? receipt.blockNumber.toString() : "Confirmed",
+        explorerUrl: `${EXPLORER_BASE}/tx/${hash}`,
       });
       await updateClaim(claim.id, "Paid", hash);
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "BSC payout failed");
+      const parsed = formatWalletError(err);
+      setErrorMsg(parsed.message);
+      setShowFaucet(Boolean(parsed.showFaucet));
       setStatusMsg(null);
       setBusy(false);
     }
@@ -144,63 +155,31 @@ export default function AdminControlsPage() {
     loadSummary();
   }, []);
 
-  const connectWallet = async () => {
-    setErrorMsg(null);
-    if (!window.ethereum) {
-      setErrorMsg("No browser wallet detected. Install MetaMask to use Admin controls.");
-      return;
-    }
-    try {
-      const accounts = (await window.ethereum.request({
-        method: "eth_requestAccounts",
-      })) as Address[];
-      const hexChain = (await window.ethereum.request({
-        method: "eth_chainId",
-      })) as string;
-      setAccount(accounts[0] ?? null);
-      setChainId(parseInt(hexChain, 16));
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Wallet connection failed");
-    }
-  };
-
   const switchToBscTestnet = async () => {
-    if (!window.ethereum) return;
     setErrorMsg(null);
     try {
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: "0x61" }],
-      });
-      setChainId(CHAIN_ID);
+      await switchOrAddBscTestnet();
     } catch (err) {
-      const code = (err as { code?: number })?.code;
-      if (code === 4902) {
-        await window.ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [
-            {
-              chainId: "0x61",
-              chainName: "BNB Smart Chain Testnet",
-              nativeCurrency: { name: "tBNB", symbol: "tBNB", decimals: 18 },
-              rpcUrls: [orgVaultChain.rpcUrls.default.http[0]],
-              blockExplorerUrls: [EXPLORER_BASE],
-            },
-          ],
-        });
-        setChainId(CHAIN_ID);
-      } else {
-        setErrorMsg(err instanceof Error ? err.message : "Network switch failed");
-      }
+      const parsed = formatWalletError(err);
+      setErrorMsg(parsed.message);
     }
   };
 
   const runWrite = async (
     label: string,
-    fn: (walletClient: ReturnType<typeof createWalletClient>) => Promise<`0x${string}`>
+    fn: (walletClient: {
+      writeContract: (req: {
+        address: Address;
+        abi: readonly unknown[];
+        functionName: string;
+        args?: readonly unknown[];
+        chain?: unknown;
+        account?: Address;
+      }) => Promise<`0x${string}`>;
+    }) => Promise<`0x${string}`>
   ) => {
-    if (!window.ethereum || !account) {
-      setErrorMsg("Connect your wallet first.");
+    if (!isConnected || !account) {
+      setErrorMsg("Connect your BSC Wallet first.");
       return;
     }
     if (chainId !== CHAIN_ID) {
@@ -209,29 +188,86 @@ export default function AdminControlsPage() {
     }
     setBusy(true);
     setErrorMsg(null);
-    setStatusMsg(`Submitting ${label}...`);
+    setShowFaucet(false);
+    setStatusMsg(`Simulating & waiting for MetaMask (${label})...`);
     setTxLink(null);
+    setChainProof(null);
     try {
-      const walletClient = createWalletClient({
-        account,
-        chain: orgVaultChain,
-        transport: custom(window.ethereum),
-      });
-      const hash = await fn(walletClient);
-      setStatusMsg(`${label} submitted!`);
+      const shim = {
+        writeContract: async (req: {
+          address: Address;
+          abi: readonly unknown[];
+          functionName: string;
+          args?: readonly unknown[];
+        }) => {
+          if (publicClient) {
+            try {
+              await publicClient.simulateContract({
+                address: req.address,
+                abi: req.abi as never,
+                functionName: req.functionName as never,
+                args: req.args as never,
+                account,
+              });
+            } catch (simErr) {
+              const decoded = decodeVaultError(simErr);
+              throw new Error(decoded.message);
+            }
+          }
+          const hash = await writeContractAsync({
+            address: req.address,
+            abi: req.abi as never,
+            functionName: req.functionName as never,
+            args: req.args as never,
+            chainId: CHAIN_ID,
+          });
+          setStatusMsg(`Confirming ${label} on BSC Testnet...`);
+          const receipt = publicClient
+            ? await publicClient.waitForTransactionReceipt({ hash })
+            : null;
+          setChainProof({
+            txHash: hash,
+            blockNumber: receipt ? receipt.blockNumber.toString() : "Confirmed",
+            explorerUrl: `${EXPLORER_BASE}/tx/${hash}`,
+          });
+          return hash;
+        },
+      };
+      const hash = await fn(shim);
+      setStatusMsg(`${label} confirmed on BSC Testnet!`);
       setTxLink(`${EXPLORER_BASE}/tx/${hash}`);
       await loadSummary();
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : `${label} failed`);
+      const parsed = formatWalletError(err);
+      setErrorMsg(parsed.message);
+      setShowFaucet(Boolean(parsed.showFaucet));
       setStatusMsg(null);
     } finally {
       setBusy(false);
     }
   };
 
-  const mockPhpAddr = summary?.mockPhpAddress;
-  const orgVaultAddr = summary?.orgVaultAddress;
-  const wrongNetwork = account !== null && chainId !== CHAIN_ID;
+  const mockPhpAddr =
+    summary?.mockPhpAddress ??
+    ((process.env.NEXT_PUBLIC_TOKEN_ADDRESS ||
+      process.env.NEXT_PUBLIC_MOCKPHP_ADDRESS) as Address | undefined);
+  const orgVaultAddr =
+    summary?.orgVaultAddress ??
+    ((process.env.NEXT_PUBLIC_VAULT_ADDRESS ||
+      process.env.NEXT_PUBLIC_ORGVAULT_ADDRESS) as Address | undefined);
+  const missingAddressEnv =
+    !process.env.NEXT_PUBLIC_VAULT_ADDRESS &&
+    !process.env.NEXT_PUBLIC_ORGVAULT_ADDRESS &&
+    !process.env.NEXT_PUBLIC_TOKEN_ADDRESS &&
+    !process.env.NEXT_PUBLIC_MOCKPHP_ADDRESS;
+  const wrongNetwork = isConnected && chainId !== CHAIN_ID;
+  const canWrite = isConnected && chainId === CHAIN_ID;
+  const isOwner = Boolean(
+    account &&
+      summary?.owner &&
+      account.toLowerCase() === summary.owner.toLowerCase()
+  );
+  const canOwnerWrite = canWrite && isOwner;
 
   return (
     <AppShell summary={summary}>
@@ -246,19 +282,25 @@ export default function AdminControlsPage() {
           <div className="flex items-center gap-2">
             {account ? (
               <span className="px-3 py-2 rounded-xl bg-white border border-[#E2E8F0] font-mono text-xs">
-                {account.slice(0, 6)}...{account.slice(-4)}
+                {account.slice(0, 6)}...{account.slice(-4)} ·{" "}
+                {isOwner ? "Owner" : "Member"}
               </span>
             ) : (
-              <button
-                type="button"
-                onClick={connectWallet}
-                className="px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-semibold"
-              >
-                Connect Wallet
-              </button>
+              <span className="text-xs text-[#64748B]">
+                Use &ldquo;Connect BSC Wallet&rdquo; in the sidebar to sign
+              </span>
             )}
           </div>
         </div>
+
+        {summary &&
+          (!summary.attestor ||
+            summary.attestor ===
+              "0x0000000000000000000000000000000000000000") && (
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-medium">
+              Warning: Attestor address is not set on OrgVault. Call Set Attestor below before verifying receipts.
+            </div>
+          )}
 
         {wrongNetwork && (
           <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -275,31 +317,48 @@ export default function AdminControlsPage() {
           </div>
         )}
 
-        {!orgVaultAddr && (
+        {missingAddressEnv && summary !== null && !orgVaultAddr && (
           <div className="p-4 rounded-2xl bg-white border border-[#E2E8F0] text-xs text-[#64748B]">
-            Contracts are not deployed to BSC Testnet yet. Deploy in Milestone 2 to enable live wallet transactions here.
+            Contracts are not deployed to BSC Testnet yet (address env vars missing).
           </div>
         )}
 
         {statusMsg && (
-          <div className="p-3 rounded-xl bg-[#ECFDF5] border border-emerald-200 text-xs text-[#065F46] flex items-center justify-between">
-            <span>{statusMsg}</span>
-            {txLink && (
-              <a
-                href={txLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-semibold underline"
-              >
-                View on BscScan ↗
-              </a>
+          <div className="p-3 rounded-xl bg-[#ECFDF5] border border-emerald-200 text-xs text-[#065F46] space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-medium">{statusMsg}</span>
+              {txLink && (
+                <a
+                  href={txLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold underline"
+                >
+                  View on BscScan ↗
+                </a>
+              )}
+            </div>
+            {chainProof && (
+              <div className="pt-1.5 border-t border-emerald-200/70 text-[11px] font-mono">
+                Chain proof: {chainProof.txHash} (Block #{chainProof.blockNumber})
+              </div>
             )}
           </div>
         )}
 
         {errorMsg && (
-          <div className="p-3 rounded-xl bg-[#FEF2F2] border border-red-200 text-xs text-[#991B1B]">
-            {errorMsg}
+          <div className="p-3 rounded-xl bg-[#FEF2F2] border border-red-200 text-xs text-[#991B1B] space-y-1">
+            <div>{errorMsg}</div>
+            {showFaucet && (
+              <a
+                href={FAUCET_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block font-semibold underline"
+              >
+                Get free tBNB from BSC Testnet Faucet ↗
+              </a>
+            )}
           </div>
         )}
 
@@ -339,7 +398,7 @@ export default function AdminControlsPage() {
                     <span className="text-xs font-semibold text-[#0F172A]">
                       {claim.memberName}
                     </span>
-                    <span className="text-xs font-bold tabular-nums text-[#2563EB]">
+                    <span className="text-xs font-bold tabular-nums text-brand">
                       ₱{claim.amount.toFixed(2)}
                     </span>
                     <span className="text-[11px] text-[#64748B]">
@@ -374,7 +433,7 @@ export default function AdminControlsPage() {
                         type="button"
                         disabled={busy}
                         onClick={() => updateClaim(claim.id, "Approved")}
-                        className="px-3 py-1.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-semibold"
+                        className="px-3 py-1.5 rounded-xl bg-brand hover:opacity-90 text-white text-xs font-semibold"
                       >
                         Approve
                       </button>
@@ -421,7 +480,7 @@ export default function AdminControlsPage() {
                       }
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs font-semibold text-[#2563EB] hover:underline"
+                      className="text-xs font-semibold text-brand hover:underline"
                     >
                       BscScan ↗
                     </a>
@@ -449,7 +508,7 @@ export default function AdminControlsPage() {
               />
               <button
                 type="button"
-                disabled={busy || !mockPhpAddr}
+                disabled={busy || !mockPhpAddr || !canWrite}
                 onClick={() =>
                   runWrite("Mint MockPHP", (wc) =>
                     wc.writeContract({
@@ -478,7 +537,7 @@ export default function AdminControlsPage() {
               />
               <button
                 type="button"
-                disabled={busy || !mockPhpAddr || !orgVaultAddr}
+                disabled={busy || !mockPhpAddr || !orgVaultAddr || !canWrite}
                 onClick={() =>
                   runWrite("Approve MockPHP", (wc) =>
                     wc.writeContract({
@@ -497,7 +556,7 @@ export default function AdminControlsPage() {
               </button>
               <button
                 type="button"
-                disabled={busy || !orgVaultAddr}
+                disabled={busy || !orgVaultAddr || !canWrite}
                 onClick={() =>
                   runWrite("Pay Dues", (wc) =>
                     wc.writeContract({
@@ -510,7 +569,7 @@ export default function AdminControlsPage() {
                     })
                   )
                 }
-                className="px-3.5 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-semibold disabled:opacity-50"
+                className="px-3.5 py-2 rounded-xl bg-brand hover:opacity-90 text-white text-xs font-semibold disabled:opacity-50"
               >
                 Pay Dues
               </button>
@@ -542,7 +601,7 @@ export default function AdminControlsPage() {
             </div>
             <button
               type="button"
-              disabled={busy || !orgVaultAddr}
+              disabled={busy || !orgVaultAddr || !canOwnerWrite}
               onClick={() =>
                 runWrite("Set Budget", (wc) =>
                   wc.writeContract({
@@ -558,7 +617,7 @@ export default function AdminControlsPage() {
                   })
                 )
               }
-              className="w-full py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-semibold disabled:opacity-50"
+              className="w-full py-2 rounded-xl bg-brand hover:opacity-90 text-white text-xs font-semibold disabled:opacity-50"
             >
               Update Budget Limit
             </button>
@@ -593,7 +652,7 @@ export default function AdminControlsPage() {
             </div>
             <button
               type="button"
-              disabled={busy || !orgVaultAddr}
+              disabled={busy || !orgVaultAddr || !canOwnerWrite}
               onClick={() =>
                 runWrite("Set Vendor", (wc) =>
                   wc.writeContract({
@@ -610,7 +669,7 @@ export default function AdminControlsPage() {
                   })
                 )
               }
-              className="w-full py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-semibold disabled:opacity-50"
+              className="w-full py-2 rounded-xl bg-brand hover:opacity-90 text-white text-xs font-semibold disabled:opacity-50"
             >
               Save Vendor
             </button>
@@ -646,7 +705,7 @@ export default function AdminControlsPage() {
             </div>
             <button
               type="button"
-              disabled={busy || !orgVaultAddr}
+              disabled={busy || !orgVaultAddr || !canOwnerWrite}
               onClick={() =>
                 runWrite("Set Officer", (wc) =>
                   wc.writeContract({
@@ -663,7 +722,7 @@ export default function AdminControlsPage() {
                   })
                 )
               }
-              className="w-full py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-semibold disabled:opacity-50"
+              className="w-full py-2 rounded-xl bg-brand hover:opacity-90 text-white text-xs font-semibold disabled:opacity-50"
             >
               Save Officer Cap
             </button>
@@ -678,7 +737,7 @@ export default function AdminControlsPage() {
               />
               <button
                 type="button"
-                disabled={busy || !orgVaultAddr}
+                disabled={busy || !orgVaultAddr || !canOwnerWrite}
                 onClick={() =>
                   runWrite("Set Attestor", (wc) =>
                     wc.writeContract({
@@ -700,7 +759,7 @@ export default function AdminControlsPage() {
             <div className="flex gap-2">
               <button
                 type="button"
-                disabled={busy || !orgVaultAddr}
+                disabled={busy || !orgVaultAddr || !canOwnerWrite}
                 onClick={() =>
                   runWrite("Pause Vault", (wc) =>
                     wc.writeContract({
@@ -719,7 +778,7 @@ export default function AdminControlsPage() {
               </button>
               <button
                 type="button"
-                disabled={busy || !orgVaultAddr}
+                disabled={busy || !orgVaultAddr || !canOwnerWrite}
                 onClick={() =>
                   runWrite("Unpause Vault", (wc) =>
                     wc.writeContract({

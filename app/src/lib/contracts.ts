@@ -1,12 +1,21 @@
 import { keccak256, toHex, type Address } from "viem";
 import { bscTestnet } from "viem/chains";
 
-export const CHAIN_ID = 97;
+export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 97);
 export const EXPLORER_BASE = "https://testnet.bscscan.com";
 export const BSC_TESTNET_RPC =
+  process.env.NEXT_PUBLIC_RPC_URL ||
   process.env.NEXT_PUBLIC_BSC_TESTNET_RPC ||
   process.env.BSC_TESTNET_RPC ||
-  "https://bsc-testnet-rpc.publicnode.com";
+  "https://data-seed-prebsc-1-s1.bnbchain.org:8545";
+export const BSC_TESTNET_FALLBACK_RPC = "https://bsc-testnet-rpc.publicnode.com";
+export const DEPLOY_BLOCK = BigInt(
+  process.env.NEXT_PUBLIC_DEPLOY_BLOCK || 142421231
+);
+export const ENV_VAULT_ADDRESS = (process.env.NEXT_PUBLIC_VAULT_ADDRESS ||
+  process.env.NEXT_PUBLIC_ORGVAULT_ADDRESS) as Address | undefined;
+export const ENV_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_TOKEN_ADDRESS ||
+  process.env.NEXT_PUBLIC_MOCKPHP_ADDRESS) as Address | undefined;
 
 export const orgVaultChain = {
   ...bscTestnet,

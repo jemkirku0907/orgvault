@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="app/public/logo-blue.png" alt="OrgVault logo" width="120" />
+</p>
+
 # OrgVault
 
 **One-liner:** For student org treasurers who track dues in spreadsheets and group chats, OrgVault uses AI to read receipts and BNB Smart Chain (BSC Testnet) to enforce budgets and release payouts.
@@ -9,11 +13,15 @@ Member / Officer (/submit, /ledger, /admin)
         │
         ▼
 Next.js API (/api/agent/submit)
-  ├─ 1. AI Adapter (Gemini 3.8 Flash w/ tool calling + DEMO_MOCK fallback)
+  ├─ 1. AI Adapter (Gemini w/ tool calling + optional DEMO_MOCK for AI step only)
   │     Tools: check_budget, list_vendors, list_officers, propose_expense
   ├─ 2. Zod validation + human confirmation gate (> CONFIRM_THRESHOLD)
   ├─ 3. Backend EIP-712 Attestor signs Expense(recipient, kind, amount, category, receiptHash, memo, deadline)
-  └─ 4. viem simulateContract -> Relayer sends executeExpense() to OrgVault.sol
+  └─ 4. Returns { orgVaultAddress, signedExpense, signature } to browser
+        │
+        ▼
+Connected MetaMask Wallet (wagmi + viem)
+  └─ Calls executeExpense(expense, signature) and pays tBNB gas
         │
         ▼
 BSC Testnet (Chain ID 97)
@@ -62,17 +70,19 @@ Do **not** commit `.env`, `.env.*`, or `.env.example`. Set these locally:
 - `BSCSCAN_API_KEY` — BscScan API key for contract verification
 - `ATTESTOR_ADDRESS` — Public address of the backend EIP-712 attestor (optional; defaults to deployer)
 
-### `app/.env.local`
+### `app/.env.local` (and Vercel Environment Variables)
 - `AI_PROVIDER` — `gemini` (or `mock`)
 - `GEMINI_API_KEY` — Google Gemini API key
-- `GEMINI_MODEL` — e.g. `gemini-3.8-flash`
-- `DEMO_MOCK` — `true` to force deterministic mock AI extraction, `false` to use Gemini
+- `GEMINI_MODEL` — e.g. `gemini-2.5-flash`
+- `DEMO_MOCK` — `false` for live Gemini AI (`true` replaces only the AI receipt-reading step; transactions remain real on-chain)
 - `CONFIRM_THRESHOLD` — Peso threshold requiring officer confirmation before signing (default `500`)
-- `NEXT_PUBLIC_BSC_TESTNET_RPC` — BSC Testnet RPC URL
-- `NEXT_PUBLIC_MOCKPHP_ADDRESS` — Deployed `MockPHP` address
-- `NEXT_PUBLIC_ORGVAULT_ADDRESS` — Deployed `OrgVault` address
+- `RELAYER_ENABLED` — `false` (default; browser MetaMask signs and pays tBNB gas for `executeExpense`)
+- `NEXT_PUBLIC_CHAIN_ID` — `97`
+- `NEXT_PUBLIC_RPC_URL` — BSC Testnet RPC URL (e.g. `https://bsc-testnet-rpc.publicnode.com`)
+- `NEXT_PUBLIC_TOKEN_ADDRESS` — Deployed `MockPHP` address
+- `NEXT_PUBLIC_VAULT_ADDRESS` — Deployed `OrgVault` address
+- `NEXT_PUBLIC_DEPLOY_BLOCK` — Deployment block (`142421231`)
 - `ATTESTOR_PRIVATE_KEY` — Server-only testnet private key for EIP-712 signing
-- `RELAYER_PRIVATE_KEY` — Server-only testnet private key for relaying `executeExpense`
 
 ## AI Usage Disclosure
 

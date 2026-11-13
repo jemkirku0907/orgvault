@@ -1,9 +1,14 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { EXPLORER_BASE } from "@/lib/contracts";
+import {
+  ENV_TOKEN_ADDRESS,
+  ENV_VAULT_ADDRESS,
+  EXPLORER_BASE,
+} from "@/lib/contracts";
 import type { VaultSummary } from "@/lib/chain/vault";
 import BscWalletButton from "@/components/BscWalletButton";
 
@@ -67,12 +72,18 @@ export default function AppShell({
 
   const totalSpent = summary
     ? summary.budgets.reduce((acc, b) => acc + b.spent, 0)
-    : 0;
-  const available = summary ? summary.vaultBalance : 3500;
-  const totalDues = available + totalSpent;
+    : null;
+  const available = summary ? summary.vaultBalance : null;
+  const totalDues =
+    available !== null && totalSpent !== null ? available + totalSpent : null;
 
-  const vaultUrl = summary?.orgVaultAddress
-    ? `${EXPLORER_BASE}/address/${summary.orgVaultAddress}`
+  const vaultAddr = summary?.orgVaultAddress ?? ENV_VAULT_ADDRESS;
+  const tokenAddr = summary?.mockPhpAddress ?? ENV_TOKEN_ADDRESS;
+  const vaultUrl = vaultAddr
+    ? `${EXPLORER_BASE}/address/${vaultAddr}`
+    : EXPLORER_BASE;
+  const tokenUrl = tokenAddr
+    ? `${EXPLORER_BASE}/address/${tokenAddr}`
     : EXPLORER_BASE;
 
   return (
@@ -80,9 +91,13 @@ export default function AppShell({
       {/* Mobile Top Header */}
       <header className="lg:hidden sticky top-0 z-20 bg-white border-b border-[#E2E8F0] px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 font-semibold text-base">
-          <span className="w-8 h-8 rounded-xl bg-[#2563EB] text-white flex items-center justify-center">
-            <ShieldIcon className="w-4 h-4" />
-          </span>
+          <Image
+            src="/logo-blue.png"
+            alt="OrgVault logo"
+            width={32}
+            height={32}
+            className="w-8 h-8 object-contain"
+          />
           <span>OrgVault</span>
         </Link>
         <button
@@ -102,9 +117,13 @@ export default function AppShell({
       >
         <div className="space-y-5">
           <Link href="/" className="hidden lg:flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#2563EB] text-white flex items-center justify-center">
-              <ShieldIcon className="w-5 h-5" />
-            </div>
+            <Image
+              src="/logo-blue.png"
+              alt="OrgVault logo"
+              width={32}
+              height={32}
+              className="w-8 h-8 object-contain"
+            />
             <div>
               <div className="font-semibold text-[16px] leading-tight">
                 OrgVault
@@ -177,21 +196,46 @@ export default function AppShell({
         </div>
 
         <div className="pt-4 border-t border-[#E2E8F0] space-y-2 text-xs">
-          <BscWalletButton />
-          <a
-            href={vaultUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] hover:border-[#2563EB] transition-colors"
-          >
-            <span className="font-medium text-[#0F172A]">BSC Testnet</span>
-            <span className="text-[#2563EB] font-semibold">BscScan ↗</span>
-          </a>
+          <BscWalletButton
+            vaultAddress={vaultAddr}
+            tokenAddress={tokenAddr}
+          />
+          <div className="p-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1.5 text-[11px]">
+            <div className="font-semibold text-[#0F172A]">
+              Contracts (BSC Testnet)
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[#64748B]">OrgVault</span>
+              <a
+                href={vaultUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-brand hover:underline"
+              >
+                {vaultAddr
+                  ? `${vaultAddr.slice(0, 6)}...${vaultAddr.slice(-4)} ↗`
+                  : "Unset"}
+              </a>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[#64748B]">MockPHP</span>
+              <a
+                href={tokenUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-brand hover:underline"
+              >
+                {tokenAddr
+                  ? `${tokenAddr.slice(0, 6)}...${tokenAddr.slice(-4)} ↗`
+                  : "Unset"}
+              </a>
+            </div>
+          </div>
           <Link
             href="/"
             className="block text-center py-2 rounded-xl border border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] font-medium"
           >
-            Switch Profile / Home
+            Home
           </Link>
         </div>
       </aside>
@@ -212,7 +256,7 @@ export default function AppShell({
             <div className="flex items-center gap-2.5">
               <Link
                 href="/admin"
-                className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-[13px] font-medium transition-colors"
+                className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-brand hover:opacity-90 text-white text-[13px] font-medium transition-colors"
               >
                 + Pay Dues
               </Link>
@@ -228,14 +272,14 @@ export default function AppShell({
                 <span className="text-[13px] font-medium text-[#64748B]">
                   Vault Available Balance
                 </span>
-                <div className="w-8 h-8 rounded-xl bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-brand-light text-brand flex items-center justify-center">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                   </svg>
                 </div>
               </div>
               <div className="mt-2.5 text-2xl font-bold tracking-tight tabular-nums">
-                {formatPeso(available)}
+                {available !== null ? formatPeso(available) : "—"}
               </div>
               <div className="mt-0.5 text-xs text-[#64748B]">
                 On-chain vault balance
@@ -254,7 +298,7 @@ export default function AppShell({
                 </div>
               </div>
               <div className="mt-2.5 text-2xl font-bold tracking-tight tabular-nums">
-                {formatPeso(totalDues)}
+                {totalDues !== null ? formatPeso(totalDues) : "—"}
               </div>
               <div className="mt-0.5 text-xs text-[#64748B]">
                 Member contributions
@@ -273,7 +317,7 @@ export default function AppShell({
                 </div>
               </div>
               <div className="mt-2.5 text-2xl font-bold tracking-tight tabular-nums">
-                {formatPeso(totalSpent)}
+                {totalSpent !== null ? formatPeso(totalSpent) : "—"}
               </div>
               <div className="mt-0.5 text-xs text-[#64748B]">
                 Settled payouts
@@ -329,7 +373,7 @@ function NavLink({
       onClick={onClick}
       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] font-medium transition-colors ${
         active
-          ? "bg-[#EFF6FF] text-[#2563EB]"
+          ? "bg-brand-light text-brand"
           : "text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
       }`}
     >

@@ -1,9 +1,16 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useLocalProfile } from "@/components/AppShell";
+import BscWalletButton from "@/components/BscWalletButton";
+import {
+  ENV_TOKEN_ADDRESS,
+  ENV_VAULT_ADDRESS,
+  EXPLORER_BASE,
+} from "@/lib/contracts";
 
 const BASE_UNIVERSITIES = [
   "I prefer not to disclose",
@@ -196,7 +203,7 @@ export default function LandingPage() {
               &larr; Back to home
             </button>
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-[#2563EB] flex items-center justify-center text-white">
+              <div className="w-7 h-7 rounded-lg bg-brand flex items-center justify-center text-white">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 3l7 4v5c0 4.97-3.05 9.18-7 10.5C8.05 21.18 5 16.97 5 12V7l7-4z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
@@ -261,7 +268,7 @@ export default function LandingPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="alex.santos@umak.edu.ph"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#EFF6FF]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand-light"
                 />
               </div>
 
@@ -274,13 +281,13 @@ export default function LandingPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 6 characters"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#EFF6FF]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand-light"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 px-4 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-sm font-semibold transition-colors"
+                className="w-full py-3 px-4 rounded-xl bg-brand hover:opacity-90 text-white text-sm font-semibold transition-colors"
               >
                 {authTab === "signup" ? "Create Account" : "Log In"}
               </button>
@@ -350,7 +357,7 @@ export default function LandingPage() {
                 )}
               </div>
 
-              <div className="flex items-center w-full rounded-xl border-2 border-[#2563EB] bg-white px-3.5 py-2.5">
+              <div className="flex items-center w-full rounded-xl border-2 border-brand bg-white px-3.5 py-2.5">
                 <input
                   type="text"
                   value={uniQuery}
@@ -403,7 +410,7 @@ export default function LandingPage() {
                           }}
                           className={`w-full px-4 py-2.5 text-left text-[15px] transition-colors ${
                             selectedUni === s
-                              ? "bg-[#EFF6FF] text-[#2563EB] font-medium"
+                              ? "bg-brand-light text-brand font-medium"
                               : "hover:bg-[#F8FAFC]"
                           }`}
                         >
@@ -422,7 +429,7 @@ export default function LandingPage() {
                         setNewSchoolName(uniQuery);
                       }
                     }}
-                    className="sticky bottom-0 w-full px-4 py-2.5 bg-[#EFF6FF] hover:bg-blue-100/80 border-t border-blue-100 text-left text-[13px] font-semibold text-[#2563EB]"
+                    className="sticky bottom-0 w-full px-4 py-2.5 bg-brand-light hover:bg-blue-100/80 border-t border-blue-100 text-left text-[13px] font-semibold text-brand"
                   >
                     + School not listed? Add a new school
                   </button>
@@ -447,14 +454,14 @@ export default function LandingPage() {
                   value={newSchoolName}
                   onChange={(e) => setNewSchoolName(e.target.value)}
                   placeholder="e.g., Pamantasan ng Lungsod ng Maynila"
-                  className="w-full px-3.5 py-2 rounded-xl border border-[#CBD5E1] bg-white text-sm focus:outline-none focus:border-[#2563EB]"
+                  className="w-full px-3.5 py-2 rounded-xl border border-[#CBD5E1] bg-white text-sm focus:outline-none focus:border-brand"
                 />
                 <input
                   type="text"
                   value={newSchoolCity}
                   onChange={(e) => setNewSchoolCity(e.target.value)}
                   placeholder="City / Campus (optional)"
-                  className="w-full px-3.5 py-2 rounded-xl border border-[#CBD5E1] bg-white text-sm focus:outline-none focus:border-[#2563EB]"
+                  className="w-full px-3.5 py-2 rounded-xl border border-[#CBD5E1] bg-white text-sm focus:outline-none focus:border-brand"
                 />
                 {addSchoolError && (
                   <div className="text-xs text-[#EF4444] font-medium">
@@ -464,7 +471,7 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={handleAddSchool}
-                  className="w-full py-2.5 px-4 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-[13px] font-semibold"
+                  className="w-full py-2.5 px-4 rounded-xl bg-brand hover:opacity-90 text-white text-[13px] font-semibold"
                 >
                   Add &amp; Select School
                 </button>
@@ -481,7 +488,7 @@ export default function LandingPage() {
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
                   placeholder="e.g., TreasurerAlex"
-                  className="flex-1 px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-[#2563EB]"
+                  className="flex-1 px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-brand"
                 />
                 <button
                   type="button"
@@ -490,7 +497,7 @@ export default function LandingPage() {
                     setNickCursor((c) => c + 1);
                     setNickname(next);
                   }}
-                  className="px-3.5 py-2.5 rounded-xl bg-[#F8FAFC] hover:bg-slate-100 border border-[#E2E8F0] text-[13px] font-medium text-[#2563EB]"
+                  className="px-3.5 py-2.5 rounded-xl bg-[#F8FAFC] hover:bg-slate-100 border border-[#E2E8F0] text-[13px] font-medium text-brand"
                 >
                   Generate
                 </button>
@@ -507,7 +514,7 @@ export default function LandingPage() {
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
                   placeholder="e.g., Computer Science Society"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-[#2563EB]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E2E8F0] text-sm focus:outline-none focus:border-brand"
                 />
               </div>
               <div>
@@ -517,7 +524,7 @@ export default function LandingPage() {
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-[#E2E8F0] bg-white text-sm focus:outline-none focus:border-[#2563EB]"
+                  className="w-full px-3 py-2.5 rounded-xl border border-[#E2E8F0] bg-white text-sm focus:outline-none focus:border-brand"
                 >
                   <option value="Treasurer">Treasurer</option>
                   <option value="President">President</option>
@@ -535,7 +542,7 @@ export default function LandingPage() {
 
             <button
               type="submit"
-              className="w-full py-3 px-5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-[15px] font-semibold transition-colors"
+              className="w-full py-3 px-5 rounded-xl bg-brand hover:opacity-90 text-white text-[15px] font-semibold transition-colors"
             >
               Continue to Dashboard
             </button>
@@ -555,12 +562,13 @@ export default function LandingPage() {
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xs border-b border-[#E2E8F0]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-[#2563EB] flex items-center justify-center text-white group-hover:bg-[#1D4ED8] transition-colors">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3l7 4v5c0 4.97-3.05 9.18-7 10.5C8.05 21.18 5 16.97 5 12V7l7-4z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
-              </svg>
-            </div>
+            <Image
+              src="/logo-blue.png"
+              alt="OrgVault logo"
+              width={32}
+              height={32}
+              className="w-8 h-8 object-contain"
+            />
             <span className="font-semibold text-[18px] tracking-tight">OrgVault</span>
           </Link>
 
@@ -572,26 +580,19 @@ export default function LandingPage() {
               <a href="#features" className="hover:text-[#0F172A] transition-colors">
                 Features
               </a>
-              <Link href="/ledger" className="hover:text-[#2563EB] transition-colors">
+              <Link href="/ledger" className="hover:text-brand transition-colors">
                 Public Ledger
               </Link>
             </nav>
 
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => openAuth("login")}
-                className="px-3.5 py-2 rounded-xl text-[14px] font-medium text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
+              <BscWalletButton compact />
+              <Link
+                href="/submit"
+                className="px-4 py-2 rounded-xl bg-brand hover:opacity-90 text-white text-[14px] font-medium transition-colors"
               >
-                Log In
-              </button>
-              <button
-                type="button"
-                onClick={() => openAuth("signup")}
-                className="px-4 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-[14px] font-medium transition-colors"
-              >
-                Get Started
-              </button>
+                Open App
+              </Link>
             </div>
           </div>
         </div>
@@ -601,6 +602,14 @@ export default function LandingPage() {
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-16 sm:pt-20 sm:pb-24">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
             <div className="lg:col-span-7">
+              <Image
+                src="/logo-blue.png"
+                alt="OrgVault logo"
+                width={96}
+                height={96}
+                className="w-24 h-24 object-contain mb-5"
+                priority
+              />
               <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-bold tracking-tight leading-[1.15]">
                 Simple, Transparent Treasury Management for Student Organizations
               </h1>
@@ -612,40 +621,30 @@ export default function LandingPage() {
               </p>
 
               <div className="mt-8 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => openAuth("signup")}
-                  className="px-6 py-3.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-[15px] font-semibold transition-colors text-center"
-                >
-                  Get Started
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowGoogleModal(true)}
-                  className="px-5 py-3.5 rounded-xl bg-white hover:bg-[#F8FAFC] text-[#0F172A] border border-[#E2E8F0] text-[15px] font-medium transition-colors inline-flex items-center justify-center gap-2.5"
-                >
-                  <GoogleGIcon />
-                  <span>Continue with Google</span>
-                </button>
-
                 <Link
                   href="/submit"
+                  className="px-6 py-3.5 rounded-xl bg-brand hover:opacity-90 text-white text-[15px] font-semibold transition-colors text-center"
+                >
+                  Submit Receipt
+                </Link>
+
+                <Link
+                  href="/ledger"
+                  className="px-5 py-3.5 rounded-xl bg-white hover:bg-[#F8FAFC] text-[#0F172A] border border-[#E2E8F0] text-[15px] font-medium transition-colors text-center"
+                >
+                  Public Ledger
+                </Link>
+
+                <Link
+                  href="/admin"
                   className="px-5 py-3.5 rounded-xl bg-[#F8FAFC] hover:bg-slate-100 text-[#0F172A] border border-[#E2E8F0] text-[15px] font-medium transition-colors text-center"
                 >
-                  Explore Demo
+                  Admin &amp; Controls
                 </Link>
               </div>
 
-              <div className="mt-5 text-[13px] text-[#64748B]">
-                Already have an organization account?
-                <button
-                  type="button"
-                  onClick={() => openAuth("login")}
-                  className="font-semibold text-[#2563EB] hover:text-[#1D4ED8] hover:underline ml-1"
-                >
-                  Log in here
-                </button>
+              <div className="mt-4 text-[12px] text-[#64748B]">
+                Organization sign-in: Coming soon · Connect MetaMask on BSC Testnet (97) to transact.
               </div>
             </div>
 
@@ -660,8 +659,8 @@ export default function LandingPage() {
                       Guarded Treasury Snapshot
                     </div>
                   </div>
-                  <span className="text-xs font-medium text-[#2563EB]">
-                    BSC Testnet (97)
+                  <span className="text-xs font-medium text-brand">
+                    Sample data · BSC Testnet (97)
                   </span>
                 </div>
 
@@ -685,7 +684,7 @@ export default function LandingPage() {
                       </span>
                     </div>
                     <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                      <div className="h-full bg-[#2563EB] rounded-full w-1/12" />
+                      <div className="h-full bg-brand rounded-full w-1/12" />
                     </div>
                   </div>
                 </div>
@@ -731,7 +730,7 @@ export default function LandingPage() {
 
                 <Link
                   href="/submit"
-                  className="mt-4 w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 border border-[#E2E8F0] text-[13px] font-medium text-[#2563EB] transition-colors flex items-center justify-center gap-1.5"
+                  className="mt-4 w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 border border-[#E2E8F0] text-[13px] font-medium text-brand transition-colors flex items-center justify-center gap-1.5"
                 >
                   <span>Open Treasury Workspace</span>
                   <span>&rarr;</span>
@@ -747,7 +746,7 @@ export default function LandingPage() {
         >
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-2xl">
-              <div className="text-xs font-semibold uppercase tracking-wider text-[#2563EB]">
+              <div className="text-xs font-semibold uppercase tracking-wider text-brand">
                 How It Works
               </div>
               <h2 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">
@@ -757,7 +756,7 @@ export default function LandingPage() {
 
             <div id="features" className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6">
-                <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] text-[#2563EB] font-semibold text-sm flex items-center justify-center mb-4">
+                <div className="w-9 h-9 rounded-xl bg-brand-light text-brand font-semibold text-sm flex items-center justify-center mb-4">
                   1
                 </div>
                 <h3 className="text-base font-semibold">Configure Vault &amp; Rules</h3>
@@ -769,7 +768,7 @@ export default function LandingPage() {
 
               <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] text-[#2563EB] font-semibold text-sm flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-xl bg-brand-light text-brand font-semibold text-sm flex items-center justify-center">
                     2
                   </div>
                   <img
@@ -786,7 +785,7 @@ export default function LandingPage() {
               </div>
 
               <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6">
-                <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] text-[#2563EB] font-semibold text-sm flex items-center justify-center mb-4">
+                <div className="w-9 h-9 rounded-xl bg-brand-light text-brand font-semibold text-sm flex items-center justify-center mb-4">
                   3
                 </div>
                 <h3 className="text-base font-semibold">Guarded On-Chain Settlement</h3>
@@ -805,10 +804,30 @@ export default function LandingPage() {
           <div className="flex items-center gap-2 text-xs text-[#64748B]">
             <span className="font-semibold text-[#0F172A]">OrgVault</span>
             <span>·</span>
-            <span>Guarded AI Student Treasury on BSC Testnet</span>
+            <span>Guarded AI Student Treasury on BSC Testnet (97)</span>
           </div>
-          <div className="text-xs text-[#64748B]">
-            Testnet-only demo · Zero personal info stored on-chain
+          <div className="flex flex-wrap items-center gap-3 text-xs text-[#64748B]">
+            <a
+              href={`${EXPLORER_BASE}/address/${
+                ENV_VAULT_ADDRESS || "0xc9c3d3bcd2326702cfc5f7fb43d4c258e8d6969e"
+              }`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono hover:text-brand underline"
+            >
+              OrgVault ↗
+            </a>
+            <a
+              href={`${EXPLORER_BASE}/address/${
+                ENV_TOKEN_ADDRESS || "0x789b107ef8efe2a5b0c48906a278622f5d98a3a6"
+              }`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono hover:text-brand underline"
+            >
+              MockPHP ↗
+            </a>
+            <span>Testnet-only</span>
           </div>
         </div>
       </footer>
@@ -862,7 +881,7 @@ export default function LandingPage() {
               className="w-full px-6 py-3.5 flex items-center justify-between gap-3 hover:bg-[#F8FAFC] transition-colors text-left"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-full bg-[#EFF6FF] text-[#2563EB] font-semibold text-xs flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-full bg-brand-light text-brand font-semibold text-xs flex items-center justify-center shrink-0">
                   AS
                 </div>
                 <div className="min-w-0">
@@ -908,7 +927,7 @@ export default function LandingPage() {
               <button
                 type="button"
                 onClick={() => setShowCustomGoogle(!showCustomGoogle)}
-                className="w-full flex items-center gap-3 text-left text-sm font-medium hover:text-[#2563EB] transition-colors"
+                className="w-full flex items-center gap-3 text-left text-sm font-medium hover:text-brand transition-colors"
               >
                 <div className="w-9 h-9 rounded-full bg-slate-100 text-[#64748B] flex items-center justify-center shrink-0">
                   +
@@ -934,7 +953,7 @@ export default function LandingPage() {
                     value={customGoogleName}
                     onChange={(e) => setCustomGoogleName(e.target.value)}
                     placeholder="Your name (optional)"
-                    className="w-full px-3 py-2 rounded-lg border border-[#CBD5E1] text-[13px] focus:outline-none focus:border-[#2563EB]"
+                    className="w-full px-3 py-2 rounded-lg border border-[#CBD5E1] text-[13px] focus:outline-none focus:border-brand"
                   />
                   <input
                     type="email"
@@ -942,11 +961,11 @@ export default function LandingPage() {
                     value={customGoogleEmail}
                     onChange={(e) => setCustomGoogleEmail(e.target.value)}
                     placeholder="name@university.edu.ph"
-                    className="w-full px-3 py-2 rounded-lg border border-[#CBD5E1] text-[13px] focus:outline-none focus:border-[#2563EB]"
+                    className="w-full px-3 py-2 rounded-lg border border-[#CBD5E1] text-[13px] focus:outline-none focus:border-brand"
                   />
                   <button
                     type="submit"
-                    className="w-full py-2 px-3 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-semibold"
+                    className="w-full py-2 px-3 rounded-lg bg-brand hover:opacity-90 text-white text-xs font-semibold"
                   >
                     Continue
                   </button>

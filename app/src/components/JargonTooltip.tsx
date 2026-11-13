@@ -80,7 +80,7 @@ export default function JargonTooltip({
         }}
         aria-label={`What is ${term}?`}
         aria-expanded={open}
-        className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full border border-[#CBD5E1] bg-white hover:bg-[#EFF6FF] hover:border-[#2563EB] text-[10px] font-bold text-[#64748B] hover:text-[#2563EB] transition-colors focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30"
+        className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full border border-[#CBD5E1] bg-white hover:bg-brand-light hover:border-brand text-[10px] font-bold text-[#64748B] hover:text-brand transition-colors focus:outline-none focus:ring-2 focus:ring-brand/30"
       >
         ?
       </button>
