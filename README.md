@@ -23,10 +23,10 @@ BSC Testnet (Chain ID 97)
 
 ## Deployed Contracts (BSC Testnet, Chain ID 97)
 
-> Pending Milestone 2 testnet deployment — run `cd contracts && npx hardhat run scripts/deploy.ts --network bscTestnet` once `contracts/.env` is configured. Addresses will be saved to `deployments/bscTestnet.json`.
+Deployed and seeded on **BSC Testnet (Chain ID 97)**. Deployment metadata is saved in [`deployments/bscTestnet.json`](deployments/bscTestnet.json).
 
-- **MockPHP:** _Pending deploy_
-- **OrgVault:** _Pending deploy_
+- **MockPHP (`mPHP`):** [`0x789b107ef8efe2a5b0c48906a278622f5d98a3a6`](https://testnet.bscscan.com/address/0x789b107ef8efe2a5b0c48906a278622f5d98a3a6)
+- **OrgVault:** [`0xc9c3d3bcd2326702cfc5f7fb43d4c258e8d6969e`](https://testnet.bscscan.com/address/0xc9c3d3bcd2326702cfc5f7fb43d4c258e8d6969e)
 
 ## Setup Steps
 

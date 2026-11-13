@@ -1,0 +1,16 @@
+{
+  "network": "bscTestnet",
+  "chainId": 97,
+  "deployedAt": "2026-11-13T03:36:34.669Z",
+  "blockNumber": 142421231,
+  "deployer": "0xb828829a513f7bf70febe260b2cbf04d16bba151",
+  "attestor": "0xb828829a513f7bf70febe260b2cbf04d16bba151",
+  "contracts": {
+    "MockPHP": "0x789b107ef8efe2a5b0c48906a278622f5d98a3a6",
+    "OrgVault": "0xc9c3d3bcd2326702cfc5f7fb43d4c258e8d6969e"
+  },
+  "explorer": {
+    "MockPHP": "https://testnet.bscscan.com/address/0x789b107ef8efe2a5b0c48906a278622f5d98a3a6",
+    "OrgVault": "https://testnet.bscscan.com/address/0xc9c3d3bcd2326702cfc5f7fb43d4c258e8d6969e"
+  }
+}
