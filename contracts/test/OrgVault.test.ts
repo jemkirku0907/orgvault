@@ -138,6 +138,45 @@ describe("MockPHP and OrgVault", async function () {
     );
   });
 
+  it("payDuesForPeriod records period payment and blocks duplicate payment for the same period", async function () {
+    const { viem, mockPhp, orgVault, member } = await deployFixture();
+    const sem1Period = keccak256(toHex("Computer Science Society:1st Semester AY 2026-2027"));
+    const sem2Period = keccak256(toHex("Computer Science Society:2nd Semester AY 2026-2027"));
+    const duesAmount = parseEther("1");
+
+    await mockPhp.write.mint([member.account.address, parseEther("10")]);
+    await mockPhp.write.approve([orgVault.address, parseEther("10")], {
+      account: member.account,
+    });
+
+    await viem.assertions.emitWithArgs(
+      orgVault.write.payDuesForPeriod([sem1Period, duesAmount], { account: member.account }),
+      orgVault,
+      "DuesPaidForPeriod",
+      [member.account.address, sem1Period, duesAmount],
+    );
+
+    assert.equal(
+      await orgVault.read.hasPaidDuesForPeriod([sem1Period, member.account.address]),
+      true,
+    );
+
+    // Duplicate payment for the same period reverts
+    await viem.assertions.revertWithCustomErrorWithArgs(
+      orgVault.write.payDuesForPeriod([sem1Period, duesAmount], { account: member.account }),
+      orgVault,
+      "DuplicateDuesPayment",
+      [sem1Period, member.account.address],
+    );
+
+    // Paying for a different period succeeds
+    await orgVault.write.payDuesForPeriod([sem2Period, duesAmount], { account: member.account });
+    assert.equal(
+      await orgVault.read.hasPaidDuesForPeriod([sem2Period, member.account.address]),
+      true,
+    );
+  });
+
   it("executes valid vendor payment via relayer and updates budget & receipt status", async function () {
     const { viem, orgVault, mockPhp, attestor, relayer, vendor, signExpense, futureDeadline } =
       await deployFixture();

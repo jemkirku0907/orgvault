@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
 import type { VaultSummary } from "@/lib/chain/vault";
@@ -59,20 +60,28 @@ export default function PublicLedgerPage() {
   return (
     <AppShell summary={summary}>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold">Public Ledger</h2>
             <p className="text-xs text-[#64748B]">
-              Transparent dues in and spending out in pesos from BSC Testnet logs.
+              Transparent dues in and spending out in pesos from BSC Testnet logs. Zero personal info on-chain.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={loadData}
-            className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-[#E2E8F0] text-xs font-semibold"
-          >
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/pay-dues"
+              className="px-3.5 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-semibold"
+            >
+              + Pay Dues
+            </Link>
+            <button
+              type="button"
+              onClick={loadData}
+              className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-[#E2E8F0] text-xs font-semibold"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
 
         {/* Totals Summary (Tier 2) */}
@@ -143,7 +152,7 @@ export default function PublicLedgerPage() {
         {/* Event Table */}
         <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden">
           <div className="px-5 py-4 border-b border-[#E2E8F0] flex items-center justify-between">
-            <h3 className="text-sm font-bold">On-Chain Events</h3>
+            <h3 className="text-sm font-bold">On-Chain &amp; Dues Ledger Events</h3>
             <span className="text-xs text-[#64748B]">
               {entries.length} event{entries.length === 1 ? "" : "s"}
             </span>
@@ -153,11 +162,11 @@ export default function PublicLedgerPage() {
               <thead>
                 <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0] text-[#64748B] font-semibold">
                   <th className="py-3 px-4">Type</th>
+                  <th className="py-3 px-4">Display Name / Member</th>
                   <th className="py-3 px-4">Category / Memo</th>
-                  <th className="py-3 px-4">Recipient / Member</th>
+                  <th className="py-3 px-4">Date</th>
                   <th className="py-3 px-4 text-right">Amount</th>
-                  <th className="py-3 px-4">Receipt Hash</th>
-                  <th className="py-3 px-4 text-right">Transaction</th>
+                  <th className="py-3 px-4 text-right">Tx Hash (BscScan)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8F0]">
@@ -193,16 +202,24 @@ export default function PublicLedgerPage() {
                     <tr key={entry.id} className="hover:bg-[#F8FAFC]">
                       <td className="py-3 px-4 whitespace-nowrap">
                         {entry.type === "dues" ? (
-                          <span className="px-2 py-0.5 rounded-full bg-brand-light text-brand font-semibold">
-                            Dues In
+                          <span className="px-2.5 py-0.5 rounded-full bg-[#EFF6FF] text-[#2563EB] font-semibold">
+                            &#10003; Dues
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full bg-[#ECFDF5] text-[#10B981] font-semibold">
+                          <span className="px-2.5 py-0.5 rounded-full bg-[#ECFDF5] text-[#10B981] font-semibold">
                             {entry.kind === 1
                               ? "Reimbursement"
                               : "Vendor Paid"}
                           </span>
                         )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="font-semibold text-[#0F172A]">
+                          {entry.displayName || "Verified Recipient"}
+                        </div>
+                        <div className="font-mono text-[11px] text-[#64748B]">
+                          {entry.actor.slice(0, 6)}...{entry.actor.slice(-4)}
+                        </div>
                       </td>
                       <td className="py-3 px-4">
                         <div className="font-medium text-[#0F172A]">
@@ -212,27 +229,30 @@ export default function PublicLedgerPage() {
                           <div className="text-[#64748B]">{entry.memo}</div>
                         )}
                       </td>
-                      <td className="py-3 px-4 font-mono text-[#475569]">
-                        {entry.actor.slice(0, 6)}...{entry.actor.slice(-4)}
+                      <td className="py-3 px-4 whitespace-nowrap text-[#475569] tabular-nums">
+                        {entry.date || "2026-11-13"}
                       </td>
                       <td className="py-3 px-4 text-right font-bold tabular-nums">
-                        {entry.type === "dues" ? "+" : "-"}
-                        {formatPeso(entry.amountPesos)}
+                        <span
+                          className={
+                            entry.type === "dues"
+                              ? "text-[#10B981]"
+                              : "text-[#0F172A]"
+                          }
+                        >
+                          {entry.type === "dues" ? "+" : "-"}
+                          {formatPeso(entry.amountPesos)}
+                        </span>
                       </td>
-                      <td className="py-3 px-4 font-mono text-[#64748B]">
-                        {entry.receiptHash
-                          ? `${entry.receiptHash.slice(0, 10)}...`
-                          : "—"}
-                      </td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
                         {entry.explorerUrl ? (
                           <a
                             href={entry.explorerUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-brand font-semibold hover:underline"
+                            className="font-mono text-[#2563EB] font-semibold hover:underline"
                           >
-                            View Transaction ↗
+                            {entry.txHash.slice(0, 8)}...{entry.txHash.slice(-6)} ↗
                           </a>
                         ) : (
                           "—"

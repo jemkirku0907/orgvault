@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useLocalProfile } from "@/components/AppShell";
 import BscWalletButton from "@/components/BscWalletButton";
+import HeaderBanner from "@/components/HeaderBanner";
 import {
   ENV_TOKEN_ADDRESS,
   ENV_VAULT_ADDRESS,
@@ -580,13 +581,22 @@ export default function LandingPage() {
               <a href="#features" className="hover:text-[#0F172A] transition-colors">
                 Features
               </a>
-              <Link href="/ledger" className="hover:text-brand transition-colors">
+              <Link href="/pay-dues" className="text-[#2563EB] font-semibold hover:text-[#1D4ED8] transition-colors">
+                Pay Dues
+              </Link>
+              <Link href="/ledger" className="hover:text-[#2563EB] transition-colors">
                 Public Ledger
               </Link>
             </nav>
 
             <div className="flex items-center gap-2">
               <BscWalletButton compact />
+              <Link
+                href="/pay-dues"
+                className="px-3.5 py-2 rounded-xl border border-[#2563EB]/30 bg-[#EFF6FF] hover:bg-blue-100/80 text-[#2563EB] text-[14px] font-semibold transition-colors"
+              >
+                Pay Dues
+              </Link>
               <Link
                 href="/submit"
                 className="px-4 py-2 rounded-xl bg-brand hover:opacity-90 text-white text-[14px] font-medium transition-colors"
@@ -597,6 +607,8 @@ export default function LandingPage() {
           </div>
         </div>
       </header>
+
+      <HeaderBanner orgName={profile.orgName} university={profile.university} />
 
       <main className="flex-1">
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-16 sm:pt-20 sm:pb-24">
@@ -621,6 +633,13 @@ export default function LandingPage() {
               </p>
 
               <div className="mt-8 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
+                <Link
+                  href="/pay-dues"
+                  className="px-6 py-3.5 rounded-xl bg-[#10B981] hover:bg-emerald-600 text-white text-[15px] font-semibold transition-colors text-center"
+                >
+                  Pay Dues (₱1.00)
+                </Link>
+
                 <Link
                   href="/submit"
                   className="px-6 py-3.5 rounded-xl bg-brand hover:opacity-90 text-white text-[15px] font-semibold transition-colors text-center"
