@@ -36,23 +36,40 @@ export async function GET() {
     const client = getPublicClient();
     const latestBlock = await client.getBlockNumber();
     const fromBlock = latestBlock > 20_000n ? latestBlock - 20_000n : 0n;
+    const chunkSize = 2_000n;
 
-    const [duesLogs, expenseLogs] = await Promise.all([
-      client.getLogs({
-        address: orgVaultAddress,
-        event: parseAbiItem("event DuesPaid(address indexed member, uint256 amount)"),
-        fromBlock,
-        toBlock: latestBlock,
-      }),
-      client.getLogs({
-        address: orgVaultAddress,
-        event: parseAbiItem(
-          "event ExpensePaid(uint8 indexed kind, address indexed recipient, uint256 amount, bytes32 indexed category, bytes32 receiptHash, string memo, uint256 spentInCategory)"
-        ),
-        fromBlock,
-        toBlock: latestBlock,
-      }),
-    ]);
+    const duesEvent = parseAbiItem("event DuesPaid(address indexed member, uint256 amount)");
+    const expenseEvent = parseAbiItem(
+      "event ExpensePaid(uint8 indexed kind, address indexed recipient, uint256 amount, bytes32 indexed category, bytes32 receiptHash, string memo, uint256 spentInCategory)"
+    );
+
+    const ranges: Array<{ from: bigint; to: bigint }> = [];
+    for (let start = fromBlock; start <= latestBlock; start += chunkSize) {
+      const end = start + chunkSize - 1n < latestBlock ? start + chunkSize - 1n : latestBlock;
+      ranges.push({ from: start, to: end });
+    }
+
+    const chunkResults = await Promise.all(
+      ranges.map(({ from, to }) =>
+        Promise.all([
+          client.getLogs({
+            address: orgVaultAddress,
+            event: duesEvent,
+            fromBlock: from,
+            toBlock: to,
+          }),
+          client.getLogs({
+            address: orgVaultAddress,
+            event: expenseEvent,
+            fromBlock: from,
+            toBlock: to,
+          }),
+        ])
+      )
+    );
+
+    const duesLogs = chunkResults.flatMap(([dues]) => dues);
+    const expenseLogs = chunkResults.flatMap(([, expenses]) => expenses);
 
     const entries: LedgerEntry[] = [
       ...duesLogs.map((log, i) => ({
