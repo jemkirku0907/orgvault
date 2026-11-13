@@ -419,7 +419,7 @@ async function runGeminiAgent(
     return runMockAgent(input, summary);
   }
 
-  const client = new GoogleGenAI({ apiKey });
+  const client = new GoogleGenAI({ apiKey, apiVersion: "v1beta" });
   const model = process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
   const steps: AgentStepLog[] = [];
 

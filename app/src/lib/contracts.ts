@@ -6,7 +6,7 @@ export const EXPLORER_BASE = "https://testnet.bscscan.com";
 export const BSC_TESTNET_RPC =
   process.env.NEXT_PUBLIC_BSC_TESTNET_RPC ||
   process.env.BSC_TESTNET_RPC ||
-  "https://data-seed-prebsc-1-s1.bnbchain.org:8545";
+  "https://bsc-testnet-rpc.publicnode.com";
 
 export const orgVaultChain = {
   ...bscTestnet,
