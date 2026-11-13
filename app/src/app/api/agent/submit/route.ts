@@ -3,6 +3,8 @@ import { keccak256, stringToBytes } from "viem";
 import { z } from "zod";
 import { runOrgVaultAgent } from "@/lib/ai/adapter";
 
+export const maxDuration = 60;
+
 const JsonBodySchema = z.object({
   requestText: z.string().min(1, "Request description is required"),
   kind: z.union([z.literal(0), z.literal(1)]).default(0),

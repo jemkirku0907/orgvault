@@ -223,8 +223,10 @@ async function executeConfirmedProposal(params: {
         category,
         memo,
       },
+      orgVaultAddress: exec.orgVaultAddress,
       attestorAddress: exec.attestorAddress,
       signature: exec.signature,
+      signedExpense: exec.signedExpense,
       txHash: exec.txHash,
       explorerUrl: exec.explorerUrl,
       steps,
@@ -247,8 +249,33 @@ async function executeConfirmedProposal(params: {
         category,
         memo,
       },
+      orgVaultAddress: exec.orgVaultAddress,
       attestorAddress: exec.attestorAddress,
       signature: exec.signature,
+      steps,
+    };
+  }
+
+  if (exec.readyForWallet) {
+    return {
+      status: "ready_for_wallet",
+      explanation: `Verified ${formatPesos(amountPesos)} to ${resolved.label} under ${category}. Confirm in MetaMask to execute on BSC Testnet.`,
+      aiMode,
+      chainMode: exec.chainMode,
+      receiptHash,
+      extracted,
+      proposed: {
+        recipientLabel: resolved.label,
+        recipientAddress: resolved.address,
+        kind,
+        amountPesos,
+        category,
+        memo,
+      },
+      orgVaultAddress: exec.orgVaultAddress,
+      attestorAddress: exec.attestorAddress,
+      signature: exec.signature,
+      signedExpense: exec.signedExpense,
       steps,
     };
   }
@@ -268,6 +295,7 @@ async function executeConfirmedProposal(params: {
       category,
       memo,
     },
+    orgVaultAddress: exec.orgVaultAddress,
     attestorAddress: exec.attestorAddress,
     signature: exec.signature,
     txHash: exec.txHash,
@@ -441,12 +469,29 @@ async function runGeminiAgent(
   }
 
   const callCreate = async (payload: Record<string, unknown>) => {
+    const withTimeout = async () => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        return await Promise.race([
+          client.interactions.create(payload as never),
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(
+              () => reject(new Error("Gemini request timed out")),
+              12_000
+            );
+          }),
+        ]);
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    };
+
     try {
-      return await client.interactions.create(payload as never);
+      return await withTimeout();
     } catch (err) {
       if (isRateLimitError(err)) {
         await new Promise((r) => setTimeout(r, 1200));
-        return await client.interactions.create(payload as never);
+        return await withTimeout();
       }
       throw err;
     }
